@@ -22,6 +22,7 @@ public class ModItemModelProvider extends ItemModelProvider {
         simpleItem(ModItems.ALGANIT);
         simpleItem(ModItems.PURIFIED_ALGANIT);
         simpleItem(ModItems.SAND_DUST);
+        simpleItem(ModItems.NEOPLASM_ROT);
     }
 
     private ItemModelBuilder complexBlock(Block block) {

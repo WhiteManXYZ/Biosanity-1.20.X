@@ -15,7 +15,7 @@ import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.block.custom.PurificationStationBlock;
 import net.whiteman.biosanity.block.custom.RedstoneLampUVBlock;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmCoreBlock;
-import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmDevourBlock;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRotBlock;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock;
 import net.whiteman.biosanity.item.ModItems;
 
@@ -41,8 +41,8 @@ public class ModBlocks {
                     .randomTicks()
             ));
 
-    public static final RegistryObject<Block> NEOPLASM_DEVOUR_BLOCK = registerBlock("neoplasm_devour_block",
-            () -> new NeoplasmDevourBlock(BlockBehaviour.Properties.copy(Blocks.SLIME_BLOCK)
+    public static final RegistryObject<Block> NEOPLASM_ROT_BLOCK = registerBlock("neoplasm_rot_block",
+            () -> new NeoplasmRotBlock(BlockBehaviour.Properties.copy(Blocks.SLIME_BLOCK)
                     .strength(0.5f)
                     .randomTicks()
             ));

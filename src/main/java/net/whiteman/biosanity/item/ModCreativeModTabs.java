@@ -15,12 +15,13 @@ public class ModCreativeModTabs {
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BiosanityMod.MOD_ID);
 
     public static final RegistryObject<CreativeModeTab> biosanity_TAB = CREATIVE_MODE_TABS.register("biosanity_tab",
-            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.ALGANIT.get()))
+            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ModItems.NEOPLASM_ROT.get()))
                     .title(Component.translatable("creativetab.biosanity_tab"))
                     .displayItems((pParameters, pOutput) -> {
                         pOutput.accept(ModItems.ALGANIT.get());
                         pOutput.accept(ModItems.PURIFIED_ALGANIT.get());
                         pOutput.accept(ModItems.SAND_DUST.get());
+                        pOutput.accept(ModItems.NEOPLASM_ROT.get());
 
                         pOutput.accept(ModBlocks.UV_LAMP_BLOCK.get());
                         pOutput.accept(ModBlocks.NETHER_ALGANIT_ORE.get());

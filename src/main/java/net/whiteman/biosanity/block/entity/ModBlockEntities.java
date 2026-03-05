@@ -17,10 +17,10 @@ public class ModBlockEntities {
                     BlockEntityType.Builder.of(PurificationStationBlockEntity::new,
                             ModBlocks.PURIFICATION_STATION_BLOCK.get()).build(null));
 
-    public static final RegistryObject<BlockEntityType<NeoplasmDevourBlockEntity>> NEOPLASM_DEVOUR_BE =
-            BLOCK_ENTITIES.register("neoplasm_devour_be", () ->
-                    BlockEntityType.Builder.of(NeoplasmDevourBlockEntity::new,
-                            ModBlocks.NEOPLASM_DEVOUR_BLOCK.get()).build(null));
+    public static final RegistryObject<BlockEntityType<NeoplasmRotBlockEntity>> NEOPLASM_ROT_BE =
+            BLOCK_ENTITIES.register("neoplasm_rot_be", () ->
+                    BlockEntityType.Builder.of(NeoplasmRotBlockEntity::new,
+                            ModBlocks.NEOPLASM_ROT_BLOCK.get()).build(null));
 
 
     public static void register(IEventBus eventBus) {

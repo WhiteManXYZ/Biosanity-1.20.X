@@ -2,8 +2,11 @@ package net.whiteman.biosanity;
 
 import com.mojang.logging.LogUtils;
 import net.minecraft.client.gui.screens.MenuScreens;
+import net.minecraft.client.renderer.ItemBlockRenderTypes;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.ModelEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.BuildCreativeModeTabContentsEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
@@ -16,6 +19,7 @@ import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.whiteman.biosanity.block.ModBlocks;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmUtils;
 import net.whiteman.biosanity.block.entity.ModBlockEntities;
+import net.whiteman.biosanity.client.model.OverlayModelLoader;
 import net.whiteman.biosanity.item.ModCreativeModTabs;
 import net.whiteman.biosanity.item.ModItems;
 import net.whiteman.biosanity.recipe.ModRecipes;
@@ -53,6 +57,7 @@ public class BiosanityMod {
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(() -> {
             NeoplasmUtils.setup();
+            //TODO remove this
             LOGGER.info("Neoplasm Resource Map Initialized!");
         });
     }
@@ -77,6 +82,16 @@ public class BiosanityMod {
         public static void onClientSetup(FMLClientSetupEvent event)
         {
             MenuScreens.register(ModMenuTypes.PURIFICATION_STATION_BLOCK_MENU.get(), PurificationStationBlockScreen::new);
+
+            event.enqueueWork(() -> {
+                // If block has overlays we add block here
+                ItemBlockRenderTypes.setRenderLayer(ModBlocks.NEOPLASM_ROT_BLOCK.get(), RenderType.translucent());
+            });
+        }
+
+        @SubscribeEvent
+        public static void registerGeometryLoaders(ModelEvent.RegisterGeometryLoaders event) {
+            event.register("util_overlay", new OverlayModelLoader());
         }
     }
 }

@@ -20,6 +20,9 @@ public class ModItems {
     public static final RegistryObject<Item> SAND_DUST = ITEMS.register("sand_dust",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistryObject<Item> NEOPLASM_ROT = ITEMS.register("neoplasm_rot",
+            () -> new Item(new Item.Properties()));
+
     public static void register(IEventBus eventBus) {
         ITEMS.register(eventBus);
     }

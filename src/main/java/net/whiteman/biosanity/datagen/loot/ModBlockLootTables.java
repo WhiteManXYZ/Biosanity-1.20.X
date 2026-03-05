@@ -27,8 +27,8 @@ public class ModBlockLootTables extends BlockLootSubProvider {
         this.dropSelf(ModBlocks.UV_LAMP_BLOCK.get());
         this.dropSelf(ModBlocks.PURIFICATION_STATION_BLOCK.get());
         this.dropSelf(ModBlocks.NEOPLASM_BLOCK.get());
-        this.dropSelf(ModBlocks.NEOPLASM_VEIN_BLOCK.get());
-        this.dropSelf(ModBlocks.NEOPLASM_DEVOUR_BLOCK.get());
+        this.add(ModBlocks.NEOPLASM_VEIN_BLOCK.get(), noDrop());
+        this.add(ModBlocks.NEOPLASM_ROT_BLOCK.get(), noDrop());
 
         this.add(ModBlocks.NETHER_ALGANIT_ORE.get(),
                 block -> createCustomOreDrops(ModBlocks.NETHER_ALGANIT_ORE.get(), ModItems.ALGANIT.get(), 1, 1));
