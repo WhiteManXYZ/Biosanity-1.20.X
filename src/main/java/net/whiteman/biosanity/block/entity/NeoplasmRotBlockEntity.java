@@ -17,9 +17,13 @@ import net.whiteman.biosanity.client.model.ModelProperties;
 import org.jetbrains.annotations.NotNull;
 
 public class NeoplasmRotBlockEntity extends BlockEntity {
+    public static final int MAX_STAGES = 3;
+    // Stage 0 -> 0.75, etc.
+    // Number of values must match MAX_STAGES
+    private static final double[] DROP_CHANCES = {0.75, 0.35, 0.1};
+
     private BlockState originalState = Blocks.AIR.defaultBlockState();
     private int overlayStage = 0;
-    private double dropChance = 0.7;
 
     public NeoplasmRotBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.NEOPLASM_ROT_BE.get(), pos, state);
@@ -34,26 +38,22 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
                 .build();
     }
 
-    public void setInfectionData(BlockState originalState, int stage) {
-        this.originalState = originalState;
+    public double getCurrentDropChance() {
+        if (overlayStage >= 0 && overlayStage < DROP_CHANCES.length) {
+            return DROP_CHANCES[overlayStage];
+        }
+        return 0.0;
+    }
+
+    public int getOverlayStage() {
+        return overlayStage;
+    }
+
+    public void setInfectionStage(int stage) {
         this.overlayStage = stage;
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-        }
-    }
-
-
-    @Override
-    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
-        BlockState oldState = this.originalState;
-        int oldStage = this.overlayStage;
-
-        super.onDataPacket(net, pkt);
-
-        if (this.level != null && (this.originalState != oldState || this.overlayStage != oldStage)) {
-            requestModelDataUpdate();
-            this.level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
         }
     }
 
@@ -66,10 +66,10 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
         return this.originalState;
     }
 
+
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
         super.saveAdditional(tag);
-        tag.putDouble("DropChance", this.dropChance);
         tag.put("OriginalBlock", NbtUtils.writeBlockState(originalState));
         tag.putInt("OverlayStage", overlayStage);
     }
@@ -77,7 +77,6 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        this.dropChance = tag.getDouble("DropChance");
         if (tag.contains("OriginalBlock", 10)) { // 10 - compound tag
             HolderGetter<Block> holdergetter = this.level != null ?
                     this.level.holderLookup(Registries.BLOCK) :
@@ -100,12 +99,16 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
         return ClientboundBlockEntityDataPacket.create(this);
     }
 
-    public void decreaseChance(double rate) {
-        this.dropChance = Math.max(this.dropChance - rate, 0);
-        this.setChanged();
-    }
+    @Override
+    public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
+        BlockState oldState = this.originalState;
+        int oldStage = this.overlayStage;
 
-    public double getDropChance() {
-        return this.dropChance;
+        super.onDataPacket(net, pkt);
+
+        if (this.level != null && (this.originalState != oldState || this.overlayStage != oldStage)) {
+            requestModelDataUpdate();
+            this.level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        }
     }
 }
