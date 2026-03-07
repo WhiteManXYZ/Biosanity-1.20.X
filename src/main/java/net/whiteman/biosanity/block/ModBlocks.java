@@ -37,19 +37,20 @@ public class ModBlocks {
 
     public static final RegistryObject<Block> NEOPLASM_BLOCK = registerBlock("neoplasm_block",
             () -> new NeoplasmCoreBlock(BlockBehaviour.Properties.copy(Blocks.SLIME_BLOCK)
-                    .strength(0.3f)
+                    .strength(0.3f, 9f)
                     .randomTicks()
             ));
 
     public static final RegistryObject<Block> NEOPLASM_ROT_BLOCK = registerBlock("neoplasm_rot_block",
             () -> new NeoplasmRotBlock(BlockBehaviour.Properties.copy(Blocks.SLIME_BLOCK)
-                    .strength(0.5f)
+                    .strength(1.5f, 2f)
+                    .ignitedByLava()
                     .randomTicks()
             ));
 
     public static final RegistryObject<Block> NEOPLASM_VEIN_BLOCK = registerBlock("neoplasm_vein_block",
             () -> new NeoplasmVeinBlock(BlockBehaviour.Properties.copy(Blocks.SLIME_BLOCK)
-                    .strength(0.5f)
+                    .strength(2.5f, 6f)
                     .randomTicks()
             ));
 
