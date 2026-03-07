@@ -66,6 +66,20 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
         return this.originalState;
     }
 
+    /**
+     * A universal getter multiplier based on the current state.
+     * @param multipliers Array of results for each stage.
+     * @return The multiplier of the current stage (or the last one available in the array).
+     */
+    public float getMultiplier(float[] multipliers) {
+        if (multipliers == null || multipliers.length == 0) return 1.0f;
+
+        // Если стадия в пределах массива — берем её, если выше — берем последний элемент
+        int index = Math.min(this.overlayStage, multipliers.length - 1);
+        // На всякий случай страхуемся от отрицательных значений
+        return multipliers[Math.max(0, index)];
+    }
+
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
