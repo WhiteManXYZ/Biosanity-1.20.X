@@ -19,6 +19,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.storage.loot.LootParams;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
@@ -32,10 +33,11 @@ import java.util.List;
 
 public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     public static final EnumProperty<NeoplasmResourceType> TYPE = EnumProperty.create("type", NeoplasmResourceType.class);
+    public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, 15);
 
     private static final int MIN_INFECTION_SPEED = 150;
     private static final int MAX_INFECTION_SPEED = 240;
-    private static final double NEOPLASM_ROT_DROP_CHANCE = 0.2;
+    private static final double NEOPLASM_ROT_DROP_CHANCE = 0.1;
     private static final float[] DIG_SPEED_MULTIPLIERS = {1.0f, 1.5f, 2.0f};
     private static final float[] EXPLOSION_RESISTANCE_MULTIPLIERS = {1.0f, 0.7f, 0.4f};
     private static final float[] FLAME_MULTIPLIERS = {1.0f, 0.8f, 0.5f};
@@ -43,7 +45,10 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
 
     public NeoplasmRotBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.stateDefinition.any().setValue(TYPE, NeoplasmResourceType.NONE));
+        this.registerDefaultState(this.stateDefinition.any()
+                .setValue(TYPE, NeoplasmResourceType.NONE)
+                .setValue(LEVEL, 0)
+        );
     }
 
 
@@ -73,7 +78,8 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
         NeoplasmUtils.ResourceEntry info = NeoplasmUtils.getResourceInfo(targetState.getBlock());
         if (info.type() != NeoplasmResourceType.NONE) {
             level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
-                    .setValue(NeoplasmRotBlock.TYPE, info.type()), 3);
+                    .setValue(NeoplasmRotBlock.TYPE, info.type())
+                    .setValue(NeoplasmRotBlock.LEVEL, info.level()), 3);
 
             if (level.getBlockEntity(targetPos) instanceof NeoplasmRotBlockEntity be) {
                 be.setOriginalState(targetState);
@@ -109,7 +115,7 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(TYPE);
+        builder.add(TYPE, LEVEL);
     }
 
     @Override
