@@ -20,12 +20,16 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
     public static final BooleanProperty MATURE = BooleanProperty.create("mature");
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
 
+    // Base params
     private static final double BRANCHING_CHANCE = 0.015;
-    private static final float FALL_CHANCE = 0.75f;
-    private static final float ORIGINAL_DIRECTION_CHANCE = 0.45f;
+    private static final double FALL_CHANCE = 0.75f;
+    private static final double ORIGINAL_DIRECTION_CHANCE = 0.45f;
     private static final int REROLL_ATTEMPTS = 10;
+    // Tick rate params
     private static final int MIN_TICKS_TO_SPREAD = 140;
-    private static final int MAX_TICKS_TO_SPREAD = 220;
+    private static final int MAX_TICKS_TO_SPREAD = 400;
+    private static final double RAIN_WEATHER_SPREAD_MODIFIER = 0.9;
+    private static final double NIGHT_SPREAD_MODIFIER = 0.8;
 
     public NeoplasmVeinBlock(Properties properties) {
         super(properties);
@@ -35,60 +39,24 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
 
     private void scheduleNextTick(Level level, BlockPos pos) {
         if (!level.isClientSide) {
-            int delay = level.random.nextInt(MIN_TICKS_TO_SPREAD, MAX_TICKS_TO_SPREAD);
-            level.scheduleTick(pos, this, delay);
-        }
-    }
-
-    @Override
-    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(FACING, MATURE);
-    }
-
-    @Override
-    public BlockState getStateForPlacement(BlockPlaceContext context) {
-        return this.defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite());
-    }
-
-    @Override
-    public void onPlace(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState oldState, boolean isMoving) {
-        super.onPlace(state, level, pos, oldState, isMoving);
-        scheduleNextTick(level, pos);
-    }
-
-    @Override
-    public void tick(BlockState state, @NotNull ServerLevel level, @NotNull BlockPos pos, @NotNull RandomSource random) {
-        // Only a "young" vein (which is not yet mature) can grow
-        if (!state.getValue(MATURE)) {
-            performGrowth(level, pos, state, random);
-        }
-        scheduleNextTick(level, pos);
-    }
-
-    @Override
-    public void randomTick(BlockState state, @NotNull ServerLevel level, @NotNull BlockPos pos, @NotNull RandomSource random) {
-        if (!state.getValue(MATURE)) {
-            // Random tick for faster spread and
-            // if block schedule chain is broken, trying to launch it again
-            this.performGrowth(level, pos, state, random);
+            double delay = level.random.nextInt(MIN_TICKS_TO_SPREAD, MAX_TICKS_TO_SPREAD);
+            // We apply spread speed modifiers for variable gameplay
+            // and don't allow delay to be lower than 20 ticks
+            level.scheduleTick(pos, this, Math.max(spreadSpeedModifiers(level, delay), 20));
         }
     }
 
     /// WIP
-    /// Make dynamic tick rate?
     /// Fix removing the end leads to stupor?
-    /// Code clearance?
     private void performGrowth(ServerLevel level, BlockPos pos, BlockState state, RandomSource random) {
+        // Original dir contains original "root vein" direction
         Direction originalDir = state.getValue(FACING);
-        System.out.println("Original direcrion: " + originalDir + " in block" + pos);
-        Direction growDir = (random.nextFloat() < ORIGINAL_DIRECTION_CHANCE) ? originalDir : Direction.getRandom(
-                random);
-        // Don't allow our vein to spread back and get twisted into knots
-        if (growDir == originalDir.getOpposite()) return;
-
+        Direction growDir = (random.nextDouble() < ORIGINAL_DIRECTION_CHANCE) ? originalDir : Direction.getRandom(random);
         BlockPos targetPos = pos.relative(growDir);
 
-        if (growDir == Direction.UP && hasNoWallNearby(level, targetPos)) return;
+        // Our special conditions to better vein spread
+        if (!conditions(originalDir, growDir, level, targetPos)) { return; }
+
         // We're trying to decrease chance of veins contact
         // or increase spread chance, if there is unreplaceable block
         if (hasNeoplasmNearby(level, targetPos, pos) || !NeoplasmUtils.isReplaceable(level.getBlockState(targetPos))) {
@@ -103,28 +71,35 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
                 }
             }
         }
-        if (hasNoWallNearby(level, pos.relative(growDir))) {
-            if (random.nextFloat() < FALL_CHANCE) {
+
+        // Increase vein chance to grow downwards when there is no wall
+        if (hasNoWallNearby(level, targetPos)) {
+            if (random.nextDouble() < FALL_CHANCE) {
                 targetPos = pos.relative(Direction.DOWN);
             }
         }
 
+        // Deciding what vein supposed to do:
+        // Spread or Absorb resource
+        // TODO(whiteman) replace with more efficient algorithm for absorption resources
         BlockState targetState = level.getBlockState(targetPos);
-
         NeoplasmUtils.ResourceEntry info = NeoplasmUtils.getResourceInfo(targetState.getBlock());
+
         if (info.type() != NeoplasmResourceType.NONE) {
-            devour(level, pos, state, targetPos, info, targetState);
+            absorbResources(level, pos, info, targetState);
         }
         else if (NeoplasmUtils.isReplaceable(targetState)) {
             grow(level, pos, state, random, targetPos, originalDir, growDir);
         }
     }
 
-    // Devour
-    // TODO(whiteman) make a in radius devouring / improve
-    private static void devour(ServerLevel level, BlockPos pos, BlockState state, BlockPos targetPos, NeoplasmUtils.ResourceEntry info, BlockState targetState) {
+    // Absorb
+    // Creates a "patient-zero" absorbed resource
+    // that continue spread rot blocks by himself
+    private void absorbResources(ServerLevel level, BlockPos targetPos, NeoplasmUtils.ResourceEntry info, BlockState targetState) {
         level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
-                .setValue(NeoplasmRotBlock.TYPE, info.type()), 3);
+                .setValue(NeoplasmRotBlock.TYPE, info.type())
+                .setValue(NeoplasmRotBlock.LEVEL, info.level()), 3);
 
         if (level.getBlockEntity(targetPos) instanceof NeoplasmRotBlockEntity devourBE) {
             devourBE.setOriginalState(targetState);
@@ -132,7 +107,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
     }
 
     // Grow
-    // There a chance to branch neoplasm into new vein
+    // Has a chance to "split" in different directions
     // by just not setting current vein into mature
     // and changing original grow direction (to spread nor in 1 dir.)
     private void grow(ServerLevel level, BlockPos pos, BlockState state, RandomSource random, BlockPos targetPos, Direction parentDir, Direction growDir) {
@@ -169,6 +144,21 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
         }
     }
 
+    private boolean conditions(Direction originalDir, Direction growDir, Level level, BlockPos targetPos) {
+        // Don't allow to grow backwards
+        if (growDir == originalDir.getOpposite()) return false;
+        // Don't allow to climb up without wall
+        if (growDir == Direction.UP && hasNoWallNearby(level, targetPos)) return false;
+
+        return true;
+    }
+
+    private int spreadSpeedModifiers(Level level, double delay) {
+        if (level.isRaining()) delay *= RAIN_WEATHER_SPREAD_MODIFIER;
+        if (level.isNight()) delay *= NIGHT_SPREAD_MODIFIER;
+        return (int) Math.ceil(delay);
+    }
+
     private boolean hasNoWallNearby(Level level, BlockPos pos) {
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
@@ -197,5 +187,39 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
             }
         }
         return false;
+    }
+
+    @Override
+    public void tick(BlockState state, @NotNull ServerLevel level, @NotNull BlockPos pos, @NotNull RandomSource random) {
+        // Only a "young" vein (which is not yet mature) can grow
+        if (!state.getValue(MATURE)) {
+            performGrowth(level, pos, state, random);
+        }
+        scheduleNextTick(level, pos);
+    }
+
+    @Override
+    public void randomTick(BlockState state, @NotNull ServerLevel level, @NotNull BlockPos pos, @NotNull RandomSource random) {
+        if (!state.getValue(MATURE)) {
+            // Random tick for faster spread and
+            // if block schedule chain is broken, trying to launch it again
+            this.performGrowth(level, pos, state, random);
+        }
+    }
+
+    @Override
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        builder.add(FACING, MATURE);
+    }
+
+    @Override
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        return this.defaultBlockState().setValue(FACING, context.getNearestLookingDirection().getOpposite());
+    }
+
+    @Override
+    public void onPlace(@NotNull BlockState state, @NotNull Level level, @NotNull BlockPos pos, @NotNull BlockState oldState, boolean isMoving) {
+        super.onPlace(state, level, pos, oldState, isMoving);
+        scheduleNextTick(level, pos);
     }
 }
