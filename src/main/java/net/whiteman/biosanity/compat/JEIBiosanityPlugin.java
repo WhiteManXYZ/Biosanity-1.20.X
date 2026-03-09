@@ -10,13 +10,15 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.recipe.PurificationStationRecipe;
+import net.whiteman.biosanity.screen.PurificationStationBlockScreen;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
 @JeiPlugin
 public class JEIBiosanityPlugin implements IModPlugin {
     @Override
-    public ResourceLocation getPluginUid() {
+    public @NotNull ResourceLocation getPluginUid() {
         return new ResourceLocation(BiosanityMod.MOD_ID, "jei_plugin");
     }
 
@@ -35,7 +37,7 @@ public class JEIBiosanityPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        //registration.addRecipeClickArea(PurificationStationBlockScreen.class, 93, 30, 20, 30,
-        //        PurificationStationCategory.PURIFICATION_TYPE);
+        registration.addRecipeClickArea(PurificationStationBlockScreen.class, 93, 30, 20, 30,
+                PurificationStationCategory.PURIFICATION_TYPE);
     }
 }
