@@ -2,6 +2,7 @@ package net.whiteman.biosanity.block.entity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.Containers;
@@ -32,6 +33,18 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 public class PurificationStationBlockEntity extends BlockEntity implements MenuProvider {
+    public static final int PURIFICATION_TIME = 400;
+    public static final int MAX_FUEL_COUNT = 20;
+    public static final int MAX_MODIFIER_COUNT = 4;
+    
+    private static final int INPUT_SLOT = 0;
+    private static final int OUTPUT_SLOT = 1;
+    private static final int FUEL_SLOT = 2;
+    private static final int SECOND_INPUT_SLOT = 3;
+    private static final int NECESSARY_PRESSURE_FOR_ITEM = 35;
+    private static final int FUEL_CONVERSION_TIME = 50;
+    private static final int MAX_PRESSURE = 140;
+    
     private final ItemStackHandler itemHandler = new ItemStackHandler(4) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -54,32 +67,19 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
     };
     private LazyOptional<IItemHandler> lazyItemHandler = LazyOptional.empty();
     protected final ContainerData data;
-
-    private static final int INPUT_SLOT = 0;
-    private static final int OUTPUT_SLOT = 1;
-    private static final int FUEL_SLOT = 2;
-    private static final int SECOND_INPUT_SLOT = 3;
-    private static final int NECESSARY_PRESSURE_FOR_ITEM = 35;
-    private static final int FUEL_CONVERSION_TIME = 50;
-    private static final int MAX_PRESSURE = 140;
-
-    public static final int PURIFICATION_TIME = 400;
-    public static final int MAX_FUEL_COUNT = 20;
-    public static final int MAX_MODIFIER_COUNT = 4;
-
-
+    
     private int progress = 0;
     private int fuel_conversion_progress = 0;
     private int fuel;
     private int modifier_material;
     private int pressure;
 
-    public PurificationStationBlockEntity(BlockPos pPos, BlockState pBlockState) {
-        super(ModBlockEntities.PURIFICATION_STATION_BE.get(), pPos, pBlockState);
+    public PurificationStationBlockEntity(BlockPos pos, BlockState blockState) {
+        super(ModBlockEntities.PURIFICATION_STATION_BE.get(), pos, blockState);
         this.data = new ContainerData() {
             @Override
-            public int get(int pIndex) {
-                return switch (pIndex) {
+            public int get(int index) {
+                return switch (index) {
                     case 0 -> PurificationStationBlockEntity.this.progress;
                     case 1 -> PurificationStationBlockEntity.this.fuel;
                     case 2 -> PurificationStationBlockEntity.this.pressure;
@@ -90,13 +90,13 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
             }
 
             @Override
-            public void set(int pIndex, int pValue) {
-                switch (pIndex) {
-                    case 0 -> PurificationStationBlockEntity.this.progress = pValue;
-                    case 1 -> PurificationStationBlockEntity.this.fuel = pValue;
-                    case 2 -> PurificationStationBlockEntity.this.pressure = pValue;
-                    case 3 -> PurificationStationBlockEntity.this.modifier_material = pValue;
-                    case 4 -> PurificationStationBlockEntity.this.fuel_conversion_progress = pValue;
+            public void set(int index, int value) {
+                switch (index) {
+                    case 0 -> PurificationStationBlockEntity.this.progress = value;
+                    case 1 -> PurificationStationBlockEntity.this.fuel = value;
+                    case 2 -> PurificationStationBlockEntity.this.pressure = value;
+                    case 3 -> PurificationStationBlockEntity.this.modifier_material = value;
+                    case 4 -> PurificationStationBlockEntity.this.fuel_conversion_progress = value;
                 }
             }
 
@@ -106,64 +106,54 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
             }
         };
     }
+    
 
-
-    @Override
-    public @NotNull Component getDisplayName() {
-        return Component.translatable("block.biosanity.purification_station_block");
-    }
-
-    @Override
-    public @Nullable AbstractContainerMenu createMenu(int pContainerId, @NotNull Inventory pPlayerInventory, @NotNull Player pPlayer) {
-        return new PurificationStationBlockMenu(pContainerId, pPlayerInventory, this, this.data);
-    }
-
-    public static void tick(Level pLevel, BlockPos pPos, BlockState pState, PurificationStationBlockEntity pBlockEntity) {
+    public void tick(Level level, BlockPos pos, BlockState state, PurificationStationBlockEntity blockEntity) {
         // Lit condition
-        if (pBlockEntity.fuel > 0) {
-            pState = pState.setValue(PurificationStationBlock.LIT, Boolean.TRUE);
-            pLevel.setBlock(pPos, pState, 3);
+        if (blockEntity.fuel > 0) {
+            state = state.setValue(PurificationStationBlock.LIT, Boolean.TRUE);
+            level.setBlock(pos, state, 3);
         } else {
-            pState = pState.setValue(PurificationStationBlock.LIT, Boolean.FALSE);
-            pLevel.setBlock(pPos, pState, 3);
+            state = state.setValue(PurificationStationBlock.LIT, Boolean.FALSE);
+            level.setBlock(pos, state, 3);
         }
         // Fuel intake
-        if (pBlockEntity.fuel <= 0 && pBlockEntity.checkInputFuel()) {
-            pBlockEntity.fuel = MAX_FUEL_COUNT;
-            pBlockEntity.itemHandler.extractItem(FUEL_SLOT, 1, false);
-            setChanged(pLevel, pPos, pState);
+        if (blockEntity.fuel <= 0 && blockEntity.checkInputFuel()) {
+            blockEntity.fuel = MAX_FUEL_COUNT;
+            blockEntity.itemHandler.extractItem(FUEL_SLOT, 1, false);
+            setChanged(level, pos, state);
         }
         // Modifier material intake
-        if (pBlockEntity.modifier_material <= 0 && pBlockEntity.checkInputModifierMaterial()) {
-            pBlockEntity.modifier_material = MAX_MODIFIER_COUNT;
-            pBlockEntity.itemHandler.extractItem(SECOND_INPUT_SLOT, 1, false);
-            setChanged(pLevel, pPos, pState);
+        if (blockEntity.modifier_material <= 0 && blockEntity.checkInputModifierMaterial()) {
+            blockEntity.modifier_material = MAX_MODIFIER_COUNT;
+            blockEntity.itemHandler.extractItem(SECOND_INPUT_SLOT, 1, false);
+            setChanged(level, pos, state);
         }
-        // Fuel to pressure convertation
+        // Fuel to pressure conversion
         // If pressure limit is reached, we are disallowing fuel consumption
-        if (pBlockEntity.fuel > 0 && pBlockEntity.pressure < MAX_PRESSURE) {
-            ++pBlockEntity.fuel_conversion_progress;
-            setChanged(pLevel, pPos, pState);
+        if (blockEntity.fuel > 0 && blockEntity.pressure < MAX_PRESSURE) {
+            ++blockEntity.fuel_conversion_progress;
+            setChanged(level, pos, state);
 
-            if (pBlockEntity.fuel_conversion_progress >= FUEL_CONVERSION_TIME) {
-                --pBlockEntity.fuel;
-                ++pBlockEntity.pressure;
-                pBlockEntity.fuel_conversion_progress = 0;
+            if (blockEntity.fuel_conversion_progress >= FUEL_CONVERSION_TIME) {
+                --blockEntity.fuel;
+                ++blockEntity.pressure;
+                blockEntity.fuel_conversion_progress = 0;
             }
         }
         // Crafting (purification)
-        if (pBlockEntity.hasRecipe() && pBlockEntity.pressure > NECESSARY_PRESSURE_FOR_ITEM && pBlockEntity.modifier_material > 0) {
-            pBlockEntity.progress += 1;
-            setChanged(pLevel, pPos, pState);
+        if (blockEntity.hasRecipe() && blockEntity.pressure > NECESSARY_PRESSURE_FOR_ITEM && blockEntity.modifier_material > 0) {
+            blockEntity.progress += 1;
+            setChanged(level, pos, state);
 
-            if (pBlockEntity.progress >= PURIFICATION_TIME) {
-                --pBlockEntity.modifier_material;
-                pBlockEntity.pressure -= NECESSARY_PRESSURE_FOR_ITEM;
-                pBlockEntity.craftItem();
-                pBlockEntity.progress = 0;
+            if (blockEntity.progress >= PURIFICATION_TIME) {
+                --blockEntity.modifier_material;
+                blockEntity.pressure -= NECESSARY_PRESSURE_FOR_ITEM;
+                blockEntity.craftItem();
+                blockEntity.progress = 0;
             }
         } else {
-            pBlockEntity.progress = 0;
+            blockEntity.progress = 0;
         }
     }
 
@@ -175,8 +165,7 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
         if (level != null)
             Containers.dropContents(this.level, this.worldPosition, inventory);
     }
-
-
+    
     private boolean checkInputFuel() {
         return this.itemHandler.getStackInSlot(FUEL_SLOT).is(Items.COAL) || this.itemHandler.getStackInSlot(FUEL_SLOT).is(Items.CHARCOAL);
     }
@@ -187,7 +176,9 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
 
     private void craftItem() {
         Optional<PurificationStationRecipe> recipe = getCurrentRecipe();
-        ItemStack result = recipe.get().getResultItem(null);
+        if (recipe.isEmpty()) return;
+
+        ItemStack result = recipe.get().getResultItem(RegistryAccess.EMPTY);
 
         this.itemHandler.extractItem(INPUT_SLOT, 1, false);
 
@@ -212,7 +203,7 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
             inventory.setItem(i, this.itemHandler.getStackInSlot(i));
         }
 
-        return this.level.getRecipeManager().getRecipeFor(PurificationStationRecipe.Type.INSTANCE, inventory, level);
+        return level != null ? level.getRecipeManager().getRecipeFor(PurificationStationRecipe.Type.INSTANCE, inventory, level) : Optional.empty();
     }
 
     private boolean canInsertItemIntoOutputSlot(Item item) {
@@ -223,7 +214,16 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
         return this.itemHandler.getStackInSlot(OUTPUT_SLOT).getCount() + count <= this.itemHandler.getStackInSlot(OUTPUT_SLOT).getMaxStackSize();
     }
 
+    @Override
+    public @NotNull Component getDisplayName() {
+        return Component.translatable("block.biosanity.purification_station_block");
+    }
 
+    @Override
+    public @Nullable AbstractContainerMenu createMenu(int containerId, @NotNull Inventory playerInventory, @NotNull Player player) {
+        return new PurificationStationBlockMenu(containerId, playerInventory, this, this.data);
+    }
+    
     @Override
     public @NotNull <T> LazyOptional<T> getCapability(@NotNull Capability<T> cap, @Nullable Direction side) {
         if (cap == ForgeCapabilities.ITEM_HANDLER) {
@@ -233,25 +233,25 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
     }
 
     @Override
-    protected void saveAdditional(CompoundTag pTag) {
-        pTag.put("inventory", itemHandler.serializeNBT());
-        pTag.putInt("purification_station_block.progress", progress);
-        pTag.putInt("purification_station_block.fuel_conversion_progress", fuel_conversion_progress);
-        pTag.putInt("purification_station_block.fuel", fuel);
-        pTag.putInt("purification_station_block.pressure", pressure);
-        pTag.putInt("purification_station_block.modifier_material", modifier_material);
-        super.saveAdditional(pTag);
+    protected void saveAdditional(CompoundTag tag) {
+        tag.put("inventory", itemHandler.serializeNBT());
+        tag.putInt("purification_station_block.progress", progress);
+        tag.putInt("purification_station_block.fuel_conversion_progress", fuel_conversion_progress);
+        tag.putInt("purification_station_block.fuel", fuel);
+        tag.putInt("purification_station_block.pressure", pressure);
+        tag.putInt("purification_station_block.modifier_material", modifier_material);
+        super.saveAdditional(tag);
     }
 
     @Override
-    public void load(@NotNull CompoundTag pTag) {
-        super.load(pTag);
-        itemHandler.deserializeNBT(pTag.getCompound("inventory"));
-        progress = pTag.getInt("purification_station_block.progress");
-        fuel_conversion_progress = pTag.getInt("purification_station_block.fuel_conversion_progress");
-        fuel = pTag.getInt("purification_station_block.fuel");
-        pressure = pTag.getInt("purification_station_block.pressure");
-        modifier_material = pTag.getInt("purification_station_block.modifier_material");
+    public void load(@NotNull CompoundTag tag) {
+        super.load(tag);
+        itemHandler.deserializeNBT(tag.getCompound("inventory"));
+        progress = tag.getInt("purification_station_block.progress");
+        fuel_conversion_progress = tag.getInt("purification_station_block.fuel_conversion_progress");
+        fuel = tag.getInt("purification_station_block.fuel");
+        pressure = tag.getInt("purification_station_block.pressure");
+        modifier_material = tag.getInt("purification_station_block.modifier_material");
     }
 
     @Override
