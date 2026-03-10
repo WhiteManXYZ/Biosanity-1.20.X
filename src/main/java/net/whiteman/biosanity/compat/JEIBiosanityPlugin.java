@@ -3,12 +3,15 @@ package net.whiteman.biosanity.compat;
 import mezz.jei.api.IModPlugin;
 import mezz.jei.api.JeiPlugin;
 import mezz.jei.api.registration.IGuiHandlerRegistration;
+import mezz.jei.api.registration.IRecipeCatalystRegistration;
 import mezz.jei.api.registration.IRecipeCategoryRegistration;
 import mezz.jei.api.registration.IRecipeRegistration;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.whiteman.biosanity.BiosanityMod;
+import net.whiteman.biosanity.block.ModBlocks;
 import net.whiteman.biosanity.recipe.PurificationStationRecipe;
 import net.whiteman.biosanity.screen.PurificationStationBlockScreen;
 import org.jetbrains.annotations.NotNull;
@@ -28,7 +31,8 @@ public class JEIBiosanityPlugin implements IModPlugin {
     }
 
     @Override
-    public void registerRecipes(IRecipeRegistration registration) {
+    public void registerRecipes(@NotNull IRecipeRegistration registration) {
+        if (Minecraft.getInstance().level == null) return;
         RecipeManager recipeManager = Minecraft.getInstance().level.getRecipeManager();
 
         List<PurificationStationRecipe> purificationRecipes = recipeManager.getAllRecipesFor(PurificationStationRecipe.Type.INSTANCE);
@@ -36,8 +40,16 @@ public class JEIBiosanityPlugin implements IModPlugin {
     }
 
     @Override
+    public void registerRecipeCatalysts(IRecipeCatalystRegistration registration) {
+        registration.addRecipeCatalyst(
+                new ItemStack(ModBlocks.PURIFICATION_STATION_BLOCK.get()),
+                PurificationStationCategory.PURIFICATION_TYPE
+        );
+    }
+
+    @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addRecipeClickArea(PurificationStationBlockScreen.class, 93, 30, 20, 30,
+        registration.addRecipeClickArea(PurificationStationBlockScreen.class, 92, 37, 25, 21,
                 PurificationStationCategory.PURIFICATION_TYPE);
     }
 }
