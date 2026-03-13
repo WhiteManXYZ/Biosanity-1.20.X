@@ -25,7 +25,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
     private static final double FALL_CHANCE = 0.75;
     private static final double ORIGINAL_DIRECTION_CHANCE = 0.45;
     private static final int REROLL_ATTEMPTS = 10;
-    private static final double MATURE_CHANCE = 0.002;
+    private static final double MATURE_CHANCE = 0.004;
     // Tick rate params
     private static final int MIN_TICKS_TO_SPREAD = 140;
     private static final int MAX_TICKS_TO_SPREAD = 400;
@@ -49,6 +49,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
 
     /// WIP
     /// Fix removing the end leads to stupor?
+    /// Maybe make smart resource searching?
     private void performGrowth(ServerLevel level, BlockPos pos, BlockState state, RandomSource random) {
         // There a chance to just grow up and end vein chain
         if (random.nextDouble() < MATURE_CHANCE) {
@@ -71,7 +72,6 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
                 BlockPos newTarget = pos.relative(newDir);
 
                 if (!hasNeoplasmNearby(level, newTarget, pos)) {
-                    growDir = newDir;
                     targetPos = newTarget;
                     break;
                 }
@@ -87,15 +87,16 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
 
         // Deciding what vein supposed to do:
         // Spread or Absorb resource
-        // TODO(whiteman) replace with more efficient algorithm for absorption resources
-        BlockState targetState = level.getBlockState(targetPos);
-        NeoplasmUtils.ResourceEntry info = NeoplasmUtils.getResourceInfo(targetState.getBlock());
-
-        if (info.type() != NeoplasmResourceType.NONE) {
-            absorbResources(level, pos, info, targetState);
+        ResourceResult nearbyResource = findResourceNearby(level, pos);
+        // Infection resource blocks is more important than spread
+        if (nearbyResource != null) {
+            absorbResources(level, pos.relative(nearbyResource.direction), nearbyResource.info, nearbyResource.state);
         }
-        else if (NeoplasmUtils.isReplaceable(targetState)) {
-            grow(level, pos, state, random, targetPos, originalDir, growDir);
+        else {
+            BlockState targetState = level.getBlockState(targetPos);
+            if (NeoplasmUtils.isReplaceable(targetState)) {
+                grow(level, pos, state, random, targetPos, originalDir);
+            }
         }
     }
 
@@ -116,18 +117,18 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
     // Has a chance to "split" in different directions
     // by just not setting current vein into mature
     // and changing original grow direction (to spread nor in 1 dir.)
-    private void grow(ServerLevel level, BlockPos pos, BlockState state, RandomSource random, BlockPos targetPos, Direction originalDir, Direction growDir) {
+    private void grow(ServerLevel level, BlockPos pos, BlockState state, RandomSource random, BlockPos targetPos, Direction originalDir) {
         if (random.nextDouble() > BRANCHING_CHANCE) {
             // Target block
             level.setBlock(targetPos, this.defaultBlockState().setValue(FACING, originalDir), 3);
             scheduleNextTick(level, targetPos);
             // Current block
             level.setBlock(pos, state.setValue(MATURE, true), 3);
-        } else {
+        } else if (!targetPos.relative(originalDir.getOpposite()).equals(pos)) {
             Direction nextDir = calculateOriginalDirection(pos, random, targetPos, originalDir);
             if (nextDir == null) return;
             // Only target block
-            boolean block = level.setBlock(targetPos, this.defaultBlockState().setValue(FACING, nextDir), 3);
+            level.setBlock(targetPos, this.defaultBlockState().setValue(FACING, nextDir), 3);
             scheduleNextTick(level, targetPos);
         }
     }
@@ -199,6 +200,21 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
             }
         }
         return false;
+    }
+
+    private record ResourceResult(Direction direction, NeoplasmUtils.ResourceEntry info, BlockState state) {}
+
+    private static ResourceResult findResourceNearby(Level level, BlockPos pos) {
+        for (Direction d : Direction.values()) {
+            BlockPos checkPos = pos.relative(d);
+            BlockState state = level.getBlockState(checkPos);
+            NeoplasmUtils.ResourceEntry info = NeoplasmUtils.getResourceInfo(state.getBlock());
+
+            if (info.type() != NeoplasmResourceType.NONE) {
+                return new ResourceResult(d, info, state);
+            }
+        }
+        return null;
     }
 
     @Override
