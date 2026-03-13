@@ -66,7 +66,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
 
         // We're trying to decrease chance of veins contact
         // or increase spread chance, if there is unreplaceable block
-        if (hasNeoplasmNearby(level, targetPos, pos) || !NeoplasmUtils.isReplaceable(level.getBlockState(targetPos))) {
+        if (hasNeoplasmNearby(level, targetPos, pos) || !NeoplasmRegistry.isReplaceable(level.getBlockState(targetPos))) {
             for (int i = 0; i < REROLL_ATTEMPTS; i++) {
                 Direction newDir = Direction.getRandom(random);
                 BlockPos newTarget = pos.relative(newDir);
@@ -94,7 +94,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
         }
         else {
             BlockState targetState = level.getBlockState(targetPos);
-            if (NeoplasmUtils.isReplaceable(targetState)) {
+            if (NeoplasmRegistry.isReplaceable(targetState)) {
                 grow(level, pos, state, random, targetPos, originalDir);
             }
         }
@@ -103,7 +103,7 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
     // Absorb
     // Creates a "patient-zero" absorbed resource
     // that continue spread rot blocks by himself
-    private void absorbResources(ServerLevel level, BlockPos targetPos, NeoplasmUtils.ResourceEntry info, BlockState targetState) {
+    private void absorbResources(ServerLevel level, BlockPos targetPos, NeoplasmRegistry.ResourceEntry info, BlockState targetState) {
         level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
                 .setValue(NeoplasmRotBlock.TYPE, info.type())
                 .setValue(NeoplasmRotBlock.LEVEL, info.level()), 3);
@@ -202,15 +202,15 @@ public class NeoplasmVeinBlock extends NeoplasmBlock {
         return false;
     }
 
-    private record ResourceResult(Direction direction, NeoplasmUtils.ResourceEntry info, BlockState state) {}
+    private record ResourceResult(Direction direction, NeoplasmRegistry.ResourceEntry info, BlockState state) {}
 
     private static ResourceResult findResourceNearby(Level level, BlockPos pos) {
         for (Direction d : Direction.values()) {
             BlockPos checkPos = pos.relative(d);
             BlockState state = level.getBlockState(checkPos);
-            NeoplasmUtils.ResourceEntry info = NeoplasmUtils.getResourceInfo(state.getBlock());
+            NeoplasmRegistry.ResourceEntry info = NeoplasmRegistry.getResourceInfo(state.getBlock());
 
-            if (info.type() != NeoplasmResourceType.NONE) {
+            if (info.type().isResource()) {
                 return new ResourceResult(d, info, state);
             }
         }

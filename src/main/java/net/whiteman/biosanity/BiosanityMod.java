@@ -16,7 +16,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmUtils;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRegistry;
 import net.whiteman.biosanity.block.entity.ModBlockEntities;
 import net.whiteman.biosanity.client.model.OverlayModelLoader;
 import net.whiteman.biosanity.item.ModCreativeModTabs;
@@ -53,7 +53,7 @@ public class BiosanityMod {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(NeoplasmUtils::setup);
+        event.enqueueWork(NeoplasmRegistry::setup);
     }
 
     // Add the example block item to the building blocks tab
