@@ -1,6 +1,7 @@
 package net.whiteman.biosanity.screen;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
@@ -9,8 +10,16 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.block.entity.PurificationStationBlockEntity;
+import net.whiteman.biosanity.block.entity.custom.PurificationStationBlockEntity;
+import net.whiteman.biosanity.util.block.purification_station.ModifiersUtils;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.ModifierManager.getCapacity;
+import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.adjustColor;
+import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.unpackColor;
 
 public class PurificationStationBlockScreen extends AbstractContainerScreen<PurificationStationBlockMenu> {
     private static final ResourceLocation PURIFICATION_STATION_TEXTURE =
@@ -48,6 +57,24 @@ public class PurificationStationBlockScreen extends AbstractContainerScreen<Puri
         renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, delta);
         renderTooltip(guiGraphics, mouseX, mouseY);
+        /// Make tooltip for modifier bar too?
+        renderPressureTooltip(guiGraphics, mouseX, mouseY);
+    }
+
+    private void renderPressureTooltip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (isHovering(153, 17, 15, 15, mouseX, mouseY)) {
+            int currentPressure = this.menu.getPressure();
+            int maxPressure = PurificationStationBlockEntity.MAX_PRESSURE;
+            List<Component> tooltip = new ArrayList<>();
+
+            tooltip.add(Component.translatable("tooltip.biosanity.purification_station_block.pressure_label")
+                    .withStyle(ChatFormatting.GRAY));
+
+            tooltip.add(Component.translatable("tooltip.biosanity.purification_station_block.pressure_value", currentPressure, maxPressure)
+                    .withStyle(ChatFormatting.AQUA));
+
+            guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+        }
     }
 
     private void renderProgressArrow(GuiGraphics guiGraphics, int x, int y) {
@@ -75,11 +102,27 @@ public class PurificationStationBlockScreen extends AbstractContainerScreen<Puri
     }
 
     private void renderModifierMaterialBar(GuiGraphics guiGraphics, int x, int y) {
-        int modifier_material = this.menu.getModifierMaterial();
-        int modifier_max_count = PurificationStationBlockEntity.MAX_MODIFIER_COUNT;
-        int barWidth = Mth.clamp((19 * modifier_material + modifier_max_count - 1) / modifier_max_count, 0, 19);
+        int modifier_amount = this.menu.getModifierMaterialAmount();
+        int modifier_max_count = getCapacity(this.menu.getModifierType());
+        int color = this.menu.getModifierColor();
+        int barTypeOffset;
+        int barWidth = Mth.clamp((19 * modifier_amount + modifier_max_count - 1) / modifier_max_count, 0, 19);
+
         if (barWidth > 0) {
-            guiGraphics.blit(PURIFICATION_STATION_TEXTURE, x + 70, y + 17, 176, 21, barWidth, 8);
+            // Bar coloring depending on modifier
+            float[] colors = unpackColor(color);
+            float[] adjustedColors = adjustColor(colors, 0.35f, -0.35f);
+
+            float r = adjustedColors[0];
+            float g = adjustedColors[1];
+            float b = adjustedColors[2];
+
+            guiGraphics.setColor(r, g, b, 1.0f);
+            // Special colored bar for other materials
+            if (this.menu.getModifierType() == ModifiersUtils.ModifierType.SAND_DUST) { barTypeOffset = 40; } else barTypeOffset = 21;
+
+            guiGraphics.blit(PURIFICATION_STATION_TEXTURE, x + 70, y + 17, 176, barTypeOffset, barWidth, 8);
+            guiGraphics.setColor(1.0f, 1.0f, 1.0f, 1.0f);
         }
     }
 
@@ -87,7 +130,6 @@ public class PurificationStationBlockScreen extends AbstractContainerScreen<Puri
         int pressure = this.menu.getPressure();
 
         // Get the frame index. Divide by 10, limiting to a maximum of frame 13
-        // TODO(whiteman) REMOVE USELESS FRAME FROM GUI TEXTURE
         int frame = Math.min(pressure / 10, 13);
         // Determine in which column (U) our frame is located
         int column = Math.min(frame / 4, 2);
