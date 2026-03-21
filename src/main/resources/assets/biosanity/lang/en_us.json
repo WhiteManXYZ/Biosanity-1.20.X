@@ -12,6 +12,12 @@
   "block.biosanity.neoplasm_rot_block": "Rot block",
 
   "jei.block.action.biosanity.purification_translatable": "Purification",
+  "jei.block.action.biosanity.painting_translatable": "Painting",
+  "jei.biosanity.purification_station_block.necessary_pressure_label": "Needed pressure:",
+  "jei.biosanity.purification_station_block.necessary_pressure_value": "%s PSI",
+
+  "tooltip.biosanity.purification_station_block.pressure_label": "Current pressure:",
+  "tooltip.biosanity.purification_station_block.pressure_value": "%s / %s PSI",
 
   "creativetab.biosanity_tab": "Biosanity"
 }

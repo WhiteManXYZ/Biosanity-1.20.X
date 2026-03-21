@@ -12,6 +12,12 @@
   "block.biosanity.neoplasm_rot_block": "Гнилой блок",
 
   "jei.block.action.biosanity.purification_translatable": "Очистка",
+  "jei.block.action.biosanity.painting_translatable": "Покраска",
+  "jei.biosanity.purification_station_block.necessary_pressure_label": "Необходимое давление:",
+  "jei.biosanity.purification_station_block.necessary_pressure_value": "%s PSI",
+
+  "tooltip.biosanity.purification_station_block.pressure_label": "Текущее давление:",
+  "tooltip.biosanity.purification_station_block.pressure_value": "%s / %s PSI",
 
   "creativetab.biosanity_tab": "Biosanity"
 }
