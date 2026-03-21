@@ -5,15 +5,17 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.*;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
 import net.minecraftforge.items.SlotItemHandler;
 import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.block.entity.PurificationStationBlockEntity;
+import net.whiteman.biosanity.block.entity.custom.PurificationStationBlockEntity;
 import net.whiteman.biosanity.item.ModItems;
+import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
 import org.jetbrains.annotations.NotNull;
+
+import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.ModifierType;
 
 public class PurificationStationBlockMenu extends AbstractContainerMenu {
     public final PurificationStationBlockEntity blockEntity;
@@ -21,7 +23,8 @@ public class PurificationStationBlockMenu extends AbstractContainerMenu {
     private final ContainerData data;
 
     public PurificationStationBlockMenu(int pContainerId, Inventory inv, FriendlyByteBuf extraData) {
-        this(pContainerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(5));
+        // TODO(whiteman) fix when spectator try to open menu, it wont open + error in log
+        this(pContainerId, inv, inv.player.level().getBlockEntity(extraData.readBlockPos()), new SimpleContainerData(8));
     }
 
     public PurificationStationBlockMenu(int pContainerId, Inventory inv, BlockEntity entity, ContainerData data) {
@@ -71,18 +74,18 @@ public class PurificationStationBlockMenu extends AbstractContainerMenu {
         if (pIndex < VANILLA_FIRST_SLOT_INDEX + VANILLA_SLOT_COUNT) {
             // This is a vanilla container slot so merge the stack into the tile inventory
             // TODO(whiteman) make vanilla parity?
-            if (sourceStack.is(Items.COAL) || sourceStack.is(Items.CHARCOAL)) {
+            if (PurificationStationBlockEntity.ALLOWED_FUEL.test(sourceStack)) {
                 if (!moveItemStackTo(sourceStack, TE_INVENTORY_FIRST_SLOT_INDEX + 2, TE_INVENTORY_FIRST_SLOT_INDEX + 3, false)) {
                     return ItemStack.EMPTY;
                 }
             }
-            else if (sourceStack.is(ModItems.SAND_DUST.get())) {
+            else if (PurificationStationBlockEntity.ALLOWED_MODIFICATORS.test(sourceStack)) {
                 if (!moveItemStackTo(sourceStack, TE_INVENTORY_FIRST_SLOT_INDEX + 3, TE_INVENTORY_FIRST_SLOT_INDEX + 4, false)) {
                     return ItemStack.EMPTY;
                 }
             }
 
-            else if (sourceStack.is(ModItems.ALGANIT.get())) {
+            else if (sourceStack.is(ModItems.ALGANIT.get()) || ColorsRegistry.isPaintable(sourceStack)) {
                 if (!moveItemStackTo(sourceStack, TE_INVENTORY_FIRST_SLOT_INDEX, TE_INVENTORY_FIRST_SLOT_INDEX + 1, false)) {
                     return ItemStack.EMPTY;
                 }
@@ -139,7 +142,7 @@ public class PurificationStationBlockMenu extends AbstractContainerMenu {
 
     public int getPressure() {return this.data.get(2); }
 
-    public int getModifierMaterial() {
+    public int getModifierMaterialAmount() {
         return this.data.get(3);
     }
 
@@ -149,9 +152,17 @@ public class PurificationStationBlockMenu extends AbstractContainerMenu {
 
     public int getScaledProgress() {
         int progress = this.data.get(0);
-        int maxProgress = PurificationStationBlockEntity.PURIFICATION_TIME;
+        int maxProgress = this.data.get(5);
         int progressArrowSize = 24;
 
         return progress != 0 ? progress * progressArrowSize / maxProgress : 0;
+    }
+
+    public ModifierType getModifierType() {
+        return ModifierType.values()[this.data.get(6)];
+    }
+
+    public int getModifierColor() {
+        return this.data.get(7);
     }
 }
