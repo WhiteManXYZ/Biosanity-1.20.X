@@ -6,11 +6,15 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.renderer.GameRenderer;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.DyeColor;
 import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.block.entity.custom.PurificationStationBlockEntity;
+import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
 import net.whiteman.biosanity.util.block.purification_station.ModifiersUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -18,13 +22,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.ModifierManager.getCapacity;
-import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.adjustColor;
-import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.unpackColor;
+import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.*;
 
 public class PurificationStationBlockScreen extends AbstractContainerScreen<PurificationStationBlockMenu> {
     private static final ResourceLocation PURIFICATION_STATION_TEXTURE =
             new ResourceLocation(BiosanityMod.MOD_ID, "textures/gui/purification_station_block_gui.png");
     private static final int[] BUBBLE_LENGTHS = new int[]{0, 6, 11};
+    private static final String MODIFIER_LABEL_TRANSLATABLE = "tooltip.biosanity.purification_station_block.modifier_label";
+    private static final String MODIFIER_VALUE_TRANSLATABLE = "tooltip.biosanity.purification_station_block.modifier_value";
+    private static final String DYE_LABEL_TRANSLATABLE = "tooltip.biosanity.purification_station_block.dye_modifier_label";
+    private static final String DYE_VALUE_TRANSLATABLE = "tooltip.biosanity.purification_station_block.dye_value";
+    private static final String DYE_TRANSLATABLE = "modifiertypes.dye.";
 
     public PurificationStationBlockScreen(PurificationStationBlockMenu pMenu, Inventory pPlayerInventory, Component pTitle) {
         super(pMenu, pPlayerInventory, pTitle);
@@ -57,8 +65,8 @@ public class PurificationStationBlockScreen extends AbstractContainerScreen<Puri
         renderBackground(guiGraphics);
         super.render(guiGraphics, mouseX, mouseY, delta);
         renderTooltip(guiGraphics, mouseX, mouseY);
-        /// Make tooltip for modifier bar too?
         renderPressureTooltip(guiGraphics, mouseX, mouseY);
+        renderModifierTooltip(guiGraphics, mouseX, mouseY);
     }
 
     private void renderPressureTooltip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -72,6 +80,39 @@ public class PurificationStationBlockScreen extends AbstractContainerScreen<Puri
 
             tooltip.add(Component.translatable("tooltip.biosanity.purification_station_block.pressure_value", currentPressure, maxPressure)
                     .withStyle(ChatFormatting.AQUA));
+
+            guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
+        }
+    }
+
+    private void renderModifierTooltip(@NotNull GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (isHovering(70, 17, 19, 7, mouseX, mouseY)) {
+            DyeColor currentDye = this.menu.getDye();
+            ModifierType currentModifier = this.menu.getModifierType();
+            int modifierAmount = this.menu.getModifierMaterialAmount();
+            int maxCapacity = ModifiersUtils.ModifierManager.getCapacity(currentModifier);
+
+            String label;
+            String value;
+            TextColor color = TextColor.fromRgb(0x55FFFF);
+            if (currentModifier == ModifiersUtils.ModifierType.DYE) {
+                label = DYE_LABEL_TRANSLATABLE;
+                value = DYE_TRANSLATABLE + currentDye.getName();
+                color = ColorsRegistry.DYE_TO_COLOR.getOrDefault(currentDye, TextColor.fromRgb(0x55FFFF));
+            } else {
+                label = MODIFIER_LABEL_TRANSLATABLE;
+                value = currentModifier.getTranslatableName();
+            }
+
+            List<Component> tooltip = new ArrayList<>();
+
+            tooltip.add(Component.translatable(MODIFIER_VALUE_TRANSLATABLE,
+                            Component.translatable(label))
+                    .withStyle(ChatFormatting.GRAY));
+
+            tooltip.add(Component.translatable(DYE_VALUE_TRANSLATABLE,
+                            Component.translatable(value))
+                    .withStyle(Style.EMPTY.withColor(color)));
 
             guiGraphics.renderComponentTooltip(this.font, tooltip, mouseX, mouseY);
         }

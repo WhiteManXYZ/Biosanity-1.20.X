@@ -18,11 +18,15 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.block.ModBlocks;
 import net.whiteman.biosanity.recipe.purification_station.AbstractStationRecipe;
+import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
 import net.whiteman.biosanity.util.block.purification_station.ModifiersUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,6 +37,11 @@ import java.util.List;
 public abstract class AbstractCategory<T extends AbstractStationRecipe> implements IRecipeCategory<T> {
     public static final ResourceLocation PURIFICATION_STATION_TEXTURE = new ResourceLocation(BiosanityMod.MOD_ID,
             "textures/gui/purification_station_block_gui.png");
+    private static final String NECESSARY_MODIFIER_LABEL_TRANSLATABLE = "jei.biosanity.purification_station_block.necessary_modifier_label";
+    private static final String MODIFIER_VALUE_TRANSLATABLE = "jei.biosanity.purification_station_block.necessary_modifier_value";
+    private static final String NECESSARY_DYE_LABEL_TRANSLATABLE = "jei.biosanity.purification_station_block.necessary_dye_label";
+    private static final String DYE_MODIFIER_VALUE_TRANSLATABLE = "jei.biosanity.purification_station_block.necessary_dye_value";
+    private static final String NECESSARY_DYE_TRANSLATABLE = "modifiertypes.dye.";
 
     protected final IDrawable background;
     protected final IDrawable icon;
@@ -82,6 +91,35 @@ public abstract class AbstractCategory<T extends AbstractStationRecipe> implemen
 
             tooltip.add(Component.translatable("jei.biosanity.purification_station_block.necessary_pressure_value", pressure)
                     .withStyle(ChatFormatting.AQUA));
+
+            guiGraphics.renderComponentTooltip(Minecraft.getInstance().font, tooltip, (int) mouseX, (int) mouseY);
+        }
+        // Render necessary modifier/color for specific item
+        if (mouseX >= 21 && mouseX <= 41 && mouseY >= 0 && mouseY <= 8) {
+            DyeColor currentDye = recipe.getColor();
+            ModifiersUtils.ModifierType currentModifier = recipe.getModifier();
+
+            String label;
+            String value;
+            TextColor color = TextColor.fromRgb(0x55FFFF);
+            if (currentModifier == ModifiersUtils.ModifierType.DYE) {
+                label = NECESSARY_DYE_LABEL_TRANSLATABLE;
+                value = NECESSARY_DYE_TRANSLATABLE + currentDye.getName();
+                color = ColorsRegistry.DYE_TO_COLOR.getOrDefault(currentDye, TextColor.fromRgb(0x55FFFF));
+            } else {
+                label = NECESSARY_MODIFIER_LABEL_TRANSLATABLE;
+                value = currentModifier.getTranslatableName();
+            }
+
+            List<Component> tooltip = new ArrayList<>();
+
+            tooltip.add(Component.translatable(MODIFIER_VALUE_TRANSLATABLE,
+                            Component.translatable(label))
+                    .withStyle(ChatFormatting.GRAY));
+
+            tooltip.add(Component.translatable(DYE_MODIFIER_VALUE_TRANSLATABLE,
+                            Component.translatable(value))
+                    .withStyle(Style.EMPTY.withColor(color)));
 
             guiGraphics.renderComponentTooltip(Minecraft.getInstance().font, tooltip, (int) mouseX, (int) mouseY);
         }
