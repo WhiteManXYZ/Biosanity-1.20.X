@@ -41,7 +41,7 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     private static final double NEOPLASM_ROT_DROP_CHANCE = 0.1;
     private static final float[] DIG_SPEED_MULTIPLIERS = {1.0f, 1.5f, 2.0f};
     private static final float[] EXPLOSION_RESISTANCE_MULTIPLIERS = {1.0f, 0.7f, 0.4f};
-    private static final float[] FLAME_MULTIPLIERS = {1.0f, 0.8f, 0.5f};
+    private static final float[] FLAME_MULTIPLIERS = {1.0f, 0.9f, 0.8f};
     private static final float[] FALL_DAMAGE_MULTIPLIERS = {1.0f, 0.85f, 0.7f};
 
     public NeoplasmRotBlock(Properties properties) {
@@ -51,7 +51,6 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
                 .setValue(LEVEL, 0)
         );
     }
-
 
     private void scheduleNextTick(Level level, BlockPos pos) {
         if (!level.isClientSide) {
@@ -218,7 +217,7 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
         if (level.getBlockEntity(pos) instanceof NeoplasmRotBlockEntity be) {
             // Also on first stage better copy original sounds
             // because infection is not that strong
-            if (be.getOverlayStage() < 1) {
+            if (be.getOverlayStage() < 1 && !be.getOriginalState().isAir()) {
                 return be.getOriginalState().getSoundType();
             }
         }
