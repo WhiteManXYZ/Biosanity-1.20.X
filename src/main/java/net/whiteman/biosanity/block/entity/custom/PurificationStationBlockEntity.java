@@ -1,5 +1,6 @@
 package net.whiteman.biosanity.block.entity.custom;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.RegistryAccess;
@@ -21,6 +22,8 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.capabilities.Capability;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -29,6 +32,8 @@ import net.minecraftforge.items.IItemHandler;
 import net.minecraftforge.items.ItemStackHandler;
 import net.whiteman.biosanity.block.custom.PurificationStationBlock;
 import net.whiteman.biosanity.block.entity.ModBlockEntities;
+import net.whiteman.biosanity.client.sound.ModSounds;
+import net.whiteman.biosanity.client.sound.PurificationStationSoundInstance;
 import net.whiteman.biosanity.item.ModItems;
 import net.whiteman.biosanity.recipe.ModRecipes;
 import net.whiteman.biosanity.recipe.purification_station.AbstractStationRecipe;
@@ -139,6 +144,18 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
                 return 9;
             }
         };
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private PurificationStationSoundInstance soundInstance;
+
+    public void clientTick(Level level, BlockPos pos, BlockState state, PurificationStationBlockEntity be) {
+        if (isConverting()) {
+            if (be.soundInstance == null || be.soundInstance.isStopped()) {
+                be.soundInstance = new PurificationStationSoundInstance(be, ModSounds.COMPRESSOR_WORK.get());
+                Minecraft.getInstance().getSoundManager().play(be.soundInstance);
+            }
+        }
     }
 
     public void tick(Level level, BlockPos pos, BlockState state, PurificationStationBlockEntity blockEntity) {
@@ -314,6 +331,10 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
         if (stack.is(Tags.Items.DYES)) return ModifierType.DYE;
 
         return ModifierType.NONE;
+    }
+
+    public boolean isConverting() {
+        return this.getBlockState().getValue(PurificationStationBlock.LIT);
     }
 
     @Override
