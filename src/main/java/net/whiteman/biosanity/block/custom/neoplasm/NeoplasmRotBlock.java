@@ -34,7 +34,8 @@ import java.util.List;
 
 public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     public static final EnumProperty<NeoplasmRegistry.Type> TYPE = EnumProperty.create("type", NeoplasmRegistry.Type.class);
-    public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, 15);
+    public static final int MAX_RESOURCE_LEVEL = 7;
+    public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, MAX_RESOURCE_LEVEL);
 
     private static final int MIN_INFECTION_SPEED = 150;
     private static final int MAX_INFECTION_SPEED = 240;
@@ -166,11 +167,6 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     }
 
     @Override
-    public boolean isFlammable(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
-        return true;
-    }
-
-    @Override
     public int getFlammability(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
         if (level.getBlockEntity(pos) instanceof NeoplasmRotBlockEntity be) {
             // Better copy flammability from original
@@ -225,10 +221,9 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     }
 
     @Override
-    public void fallOn(Level level, @NotNull BlockState state, @NotNull BlockPos pos, @NotNull Entity entity, float fallDistance) {
+    public void fallOn(@NotNull Level level, @NotNull BlockState state, @NotNull BlockPos pos, @NotNull Entity entity, float fallDistance) {
         if (level.getBlockEntity(pos) instanceof NeoplasmRotBlockEntity be) {
-            // Due to the fleshy origin of the neoplasm
-            // we reduce damage depending on the stage of infection
+            // We reduce damage depending on the stage of infection
             super.fallOn(level, state, pos, entity, fallDistance * be.getMultiplier(FALL_DAMAGE_MULTIPLIERS));
         } else {
             super.fallOn(level, state, pos, entity, fallDistance);

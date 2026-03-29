@@ -6,6 +6,7 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRotBlock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
@@ -50,30 +51,36 @@ public class NeoplasmRegistry {
         //region Devourable registry
         DEVOUR_MAP.clear();
 
-        register(Blocks.NETHERITE_BLOCK, Type.MINERAL, 11);
+        // LEVEL 7: THE PEAK
+        register(Blocks.NETHERITE_BLOCK, Type.MINERAL, 7);
 
-        register(Blocks.DIAMOND_BLOCK, Type.MINERAL, 9);
+        // LEVEL 6: PRECIOUS BLOCKS
+        register(Blocks.DIAMOND_BLOCK, Type.MINERAL, 6);
+        register(Blocks.EMERALD_BLOCK, Type.MINERAL, 6);
+        register(Blocks.GOLD_BLOCK, Type.MINERAL, 6);
 
-        register(Blocks.GOLD_BLOCK, Type.MINERAL, 8);
-
+        // LEVEL 5: CONCENTRATED ENERGY / BLOCKS
         register(Blocks.REDSTONE_BLOCK, Type.ENERGY, 5);
+        register(Blocks.IRON_BLOCK, Type.MINERAL, 5);
+        register(Blocks.LAPIS_BLOCK, Type.ENERGY, 5);
 
-        register(Blocks.NETHER_QUARTZ_ORE, Type.MINERAL, 3);
-
-        // -------------------------
-
+        // LEVEL 4: RARE ORES
+        register(Blocks.ANCIENT_DEBRIS, Type.MINERAL, 4);
         register(BlockTags.DIAMOND_ORES, Type.MINERAL, 4);
 
-        register(BlockTags.CRIMSON_STEMS, Type.BIOMASS, 3);
-        register(BlockTags.WARPED_STEMS, Type.BIOMASS, 3);
+        // LEVEL 3: EXOTIC & NETHER
+        register(Blocks.NETHER_QUARTZ_ORE, Type.MINERAL, 3);
         register(BlockTags.GOLD_ORES, Type.MINERAL, 3);
         register(BlockTags.EMERALD_ORES, Type.MINERAL, 3);
-        register(BlockTags.LAPIS_ORES, Type.ENERGY, 3);
+        register(BlockTags.CRIMSON_STEMS, Type.BIOMASS, 3);
+        register(BlockTags.WARPED_STEMS, Type.BIOMASS, 3);
 
-        register(BlockTags.DARK_OAK_LOGS, Type.BIOMASS, 2);
+        // LEVEL 2: UTILITY MINERALS
         register(BlockTags.IRON_ORES, Type.MINERAL, 2);
+        register(BlockTags.LAPIS_ORES, Type.ENERGY, 2);
         register(BlockTags.REDSTONE_ORES, Type.ENERGY, 2);
 
+        // LEVEL 1: BASE BIOMASS & FUEL
         register(BlockTags.LOGS, Type.BIOMASS, 1);
         register(BlockTags.COAL_ORES, Type.MINERAL, 1);
         register(BlockTags.COPPER_ORES, Type.MINERAL, 1);
@@ -85,6 +92,16 @@ public class NeoplasmRegistry {
 
         register(BlockTags.REPLACEABLE_BY_TREES);
         register(BlockTags.FLOWERS);
+        register(BlockTags.DIRT);
+        register(BlockTags.SAND);
+        register(BlockTags.SNOW);
+        register(BlockTags.CORAL_BLOCKS);
+        register(BlockTags.WOODEN_STAIRS);
+        register(BlockTags.PLANKS);
+        register(Blocks.GRAVEL);
+        register(Blocks.CLAY);
+        register(Blocks.MOSS_CARPET);
+        register(Blocks.FARMLAND);
         //endregion
     }
 
@@ -115,10 +132,20 @@ public class NeoplasmRegistry {
     }
 
     private static void register(Block block, Type type, int level) {
+        if (level > NeoplasmRotBlock.MAX_RESOURCE_LEVEL) {
+            throw new IllegalArgumentException("Error in NeoplasmRegistry: Level " + level +
+                    " is higher than max allowed: " + NeoplasmRotBlock.MAX_RESOURCE_LEVEL + ". Use lower value instead.");
+        }
+
         DEVOUR_MAP.put(block, new ResourceEntry(type, level));
     }
 
     private static void register(TagKey<Block> tag, Type type, int level) {
+        if (level > NeoplasmRotBlock.MAX_RESOURCE_LEVEL) {
+            throw new IllegalArgumentException("Error in NeoplasmRegistry: Level " + level +
+                    " is higher than max allowed: " + NeoplasmRotBlock.MAX_RESOURCE_LEVEL + ". Use lower value instead.");
+        }
+
         DEVOUR_MAP_TAGS.put(tag, new ResourceEntry(type, level));
     }
 
