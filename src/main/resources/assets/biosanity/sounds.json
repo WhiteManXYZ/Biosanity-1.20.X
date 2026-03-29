@@ -1,0 +1,11 @@
+{
+  "compressor_work": {
+    "subtitle": "subtitles.biosanity.compressor_work",
+    "sounds": [
+      {
+        "name": "biosanity:block/purification_station/compressor_sound_loop",
+        "stream": true
+      }
+    ]
+  }
+}
