@@ -47,5 +47,7 @@
   "modifiertypes.dye.red": "Red",
   "modifiertypes.dye.black": "Black",
 
-  "creativetab.biosanity_tab": "Biosanity"
+  "creativetab.biosanity_tab": "Biosanity",
+
+  "subtitles.biosanity.compressor_work": "Compressor hum"
 }
