@@ -7,6 +7,7 @@ import net.minecraftforge.registries.ForgeRegistries;
 import net.minecraftforge.registries.RegistryObject;
 import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.block.ModBlocks;
+import net.whiteman.biosanity.block.entity.custom.NeoplasmCoreBlockEntity;
 import net.whiteman.biosanity.block.entity.custom.NeoplasmRotBlockEntity;
 import net.whiteman.biosanity.block.entity.custom.PurificationStationBlockEntity;
 
@@ -25,6 +26,13 @@ public class ModBlockEntities {
             BLOCK_ENTITIES.register("neoplasm_rot_be", () ->
                     BlockEntityType.Builder.of(NeoplasmRotBlockEntity::new,
                             ModBlocks.NEOPLASM_ROT_BLOCK.get()).build(null));
+
+    @SuppressWarnings("ConstantConditions")
+    public static final RegistryObject<BlockEntityType<NeoplasmCoreBlockEntity>> NEOPLASM_CORE_BE =
+            BLOCK_ENTITIES.register("neoplasm_core_be", () ->
+                    BlockEntityType.Builder.of(NeoplasmCoreBlockEntity::new,
+                            ModBlocks.NEOPLASM_CORE_BLOCK.get()).build(null));
+
 
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
