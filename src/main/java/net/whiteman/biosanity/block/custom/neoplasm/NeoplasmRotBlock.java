@@ -24,17 +24,20 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 import net.whiteman.biosanity.block.ModBlocks;
 import net.whiteman.biosanity.block.entity.custom.NeoplasmRotBlockEntity;
+import net.whiteman.biosanity.block.entity.custom.NeoplasmVeinBlockEntity;
 import net.whiteman.biosanity.item.ModItems;
-import net.whiteman.biosanity.util.block.NeoplasmRegistry;
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.List;
 
-import static net.whiteman.biosanity.util.block.NeoplasmRegistry.MAX_RESOURCE_LEVEL;
+import static net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock.HAS_NUTRIENT;
+import static net.whiteman.biosanity.block.entity.custom.NeoplasmVeinBlockEntity.TICKS_TO_TRANSFER_NUTRIENT;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.MAX_RESOURCE_LEVEL;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.ResourceRegistry.*;
 
-public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
-    public static final EnumProperty<NeoplasmRegistry.ResourceType> RESOURCE_TYPE = EnumProperty.create("type", NeoplasmRegistry.ResourceType.class);
+public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock,INeoplasmNode {
+    public static final EnumProperty<ResourceType> RESOURCE_TYPE = EnumProperty.create("type", ResourceType.class);
     public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, MAX_RESOURCE_LEVEL);
 
     private static final int MIN_INFECTION_SPEED = 150;
@@ -48,7 +51,7 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
     public NeoplasmRotBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
-                .setValue(RESOURCE_TYPE, NeoplasmRegistry.ResourceType.NONE)
+                .setValue(RESOURCE_TYPE, ResourceType.NONE)
                 .setValue(LEVEL, 0)
         );
     }
@@ -57,6 +60,26 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
         if (!level.isClientSide) {
             int delay = level.random.nextInt(MIN_INFECTION_SPEED, MAX_INFECTION_SPEED);
             level.scheduleTick(pos, this, delay);
+        }
+    }
+
+    // TODO make ability to send resources from neighbors too
+    private void sendResourceToVein(Level level, BlockPos pos, BlockState state) {
+        for (Direction dir : Direction.values()) {
+            BlockPos targetPos = pos.relative(dir);
+            BlockState targetState = level.getBlockState(targetPos);
+
+            if (targetState.getBlock() instanceof NeoplasmVeinBlock veinBlock) {
+                if (targetState.getValue(HAS_NUTRIENT)) continue;
+
+                level.setBlock(targetPos, targetState.setValue(HAS_NUTRIENT, true), 3);
+
+                if (level.getBlockEntity(targetPos) instanceof NeoplasmVeinBlockEntity be) {
+                    be.setData(state.getValue(RESOURCE_TYPE), state.getValue(LEVEL));
+                }
+                level.scheduleTick(targetPos, veinBlock, TICKS_TO_TRANSFER_NUTRIENT);
+                break;
+            }
         }
     }
 
@@ -76,7 +99,7 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
         BlockPos targetPos = pos.relative(randomDir);
         BlockState targetState = level.getBlockState(targetPos);
 
-        NeoplasmRegistry.ResourceTypeEntry info = NeoplasmRegistry.getResourceInfo(targetState.getBlock());
+        ResourceTypeEntry info = getResourceInfo(targetState.getBlock());
         if (info.resourceType().isResource()) {
             level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
                     .setValue(NeoplasmRotBlock.RESOURCE_TYPE, info.resourceType())
@@ -102,6 +125,10 @@ public class NeoplasmRotBlock extends NeoplasmBlock implements EntityBlock {
             int currentStage = be.getOverlayStage();
             if (currentStage < NeoplasmRotBlockEntity.MAX_STAGES - 1) {
                 be.setInfectionStage(currentStage + 1);
+
+
+                // TEST
+                sendResourceToVein(level, pos, state);
             }
         }
         // Random tick for faster infect and
