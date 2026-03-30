@@ -6,13 +6,15 @@ import net.minecraft.util.StringRepresentable;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
-import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRotBlock;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
 public class NeoplasmRegistry {
     public record ResourceTypeEntry(ResourceType resourceType, int level) {}
+    public static final int MAX_RESOURCE_LEVEL = 7;
+    public static final int MAX_XP = 1000;
+    public static final int MAX_ALERT_POINTS = 10000;
 
     private static final Map<Block, ResourceTypeEntry> DEVOUR_MAP = new LinkedHashMap<>();
     private static final Map<TagKey<Block>, ResourceTypeEntry> DEVOUR_MAP_TAGS = new LinkedHashMap<>();
@@ -43,10 +45,10 @@ public class NeoplasmRegistry {
 
     public enum CoreLevel implements StringRepresentable {
         T1("tier_1", 0),
-        T2("tier_2", 100),
-        T3("tier_3", 300),
-        T4("tier_4", 500),
-        T5("tier_5", 1000);
+        T2("tier_2", 120),
+        T3("tier_3", 1000),
+        T4("tier_4", 5000),
+        T5("tier_5", 30_000);
 
         private final String name;
         private final int xp;
@@ -64,6 +66,36 @@ public class NeoplasmRegistry {
         public int getNeededXp() { return xp; }
 
         public static int getStartingXp() { return T1.xp; }
+    }
+
+    public enum CoreAlertLevel implements StringRepresentable {
+        CALM("calm", 0),
+        WATCHING("watching", 500),
+        STRESSED("stressed", 2000),
+        CRITICAL("critical", 5000);
+
+        private final String name;
+        private final int alertPoints;
+
+        CoreAlertLevel(String name, int alertPoints) {
+            this.name = name;
+            this.alertPoints = alertPoints;
+        }
+
+        @Override
+        public @NotNull String getSerializedName() {
+            return this.name;
+        }
+
+        public static CoreAlertLevel fromPoints(int points) {
+            CoreAlertLevel[] levels = CoreAlertLevel.values();
+            for (int i = levels.length - 1; i >= 0; i--) {
+                if (points >= levels[i].alertPoints) {
+                    return levels[i];
+                }
+            }
+            return CALM;
+        }
     }
 
     public static void setup() {
@@ -157,18 +189,18 @@ public class NeoplasmRegistry {
     }
 
     private static void register(Block block, ResourceType resourceType, int level) {
-        if (level > NeoplasmRotBlock.MAX_RESOURCE_LEVEL) {
+        if (level > MAX_RESOURCE_LEVEL) {
             throw new IllegalArgumentException("Error in NeoplasmRegistry: Level " + level +
-                    " is higher than max allowed: " + NeoplasmRotBlock.MAX_RESOURCE_LEVEL + ". Use lower value instead.");
+                    " is higher than max allowed: " + MAX_RESOURCE_LEVEL + ". Use lower value instead.");
         }
 
         DEVOUR_MAP.put(block, new ResourceTypeEntry(resourceType, level));
     }
 
     private static void register(TagKey<Block> tag, ResourceType resourceType, int level) {
-        if (level > NeoplasmRotBlock.MAX_RESOURCE_LEVEL) {
+        if (level > MAX_RESOURCE_LEVEL) {
             throw new IllegalArgumentException("Error in NeoplasmRegistry: Level " + level +
-                    " is higher than max allowed: " + NeoplasmRotBlock.MAX_RESOURCE_LEVEL + ". Use lower value instead.");
+                    " is higher than max allowed: " + MAX_RESOURCE_LEVEL + ". Use lower value instead.");
         }
 
         DEVOUR_MAP_TAGS.put(tag, new ResourceTypeEntry(resourceType, level));
