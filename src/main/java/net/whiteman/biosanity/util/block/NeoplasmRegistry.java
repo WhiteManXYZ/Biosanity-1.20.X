@@ -41,6 +41,31 @@ public class NeoplasmRegistry {
         }
     }
 
+    public enum CoreLevel implements StringRepresentable {
+        T1("tier_1", 0),
+        T2("tier_2", 100),
+        T3("tier_3", 300),
+        T4("tier_4", 500),
+        T5("tier_5", 1000);
+
+        private final String name;
+        private final int xp;
+
+        CoreLevel(String name, int xp) {
+            this.name = name;
+            this.xp = xp;
+        }
+
+        @Override
+        public @NotNull String getSerializedName() {
+            return this.name;
+        }
+
+        public int getNeededXp() { return xp; }
+
+        public static int getStartingXp() { return T1.xp; }
+    }
+
     public static void setup() {
         // Important: Register individual blocks first,
         // then block tags, all in order:
