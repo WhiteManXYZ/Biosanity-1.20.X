@@ -1,6 +1,8 @@
 package net.whiteman.biosanity.block.custom.neoplasm;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -15,6 +17,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class NeoplasmCoreBlock extends BaseEntityBlock {
     public NeoplasmCoreBlock(Properties pProperties) { super(pProperties); }
+
+    @Override
+    public void tick(@NotNull BlockState pState, @NotNull ServerLevel pLevel, @NotNull BlockPos pPos, @NotNull RandomSource pRandom) {
+        super.tick(pState, pLevel, pPos, pRandom);
+    }
 
     @Override
     public @Nullable BlockEntity newBlockEntity(@NotNull BlockPos pPos, @NotNull BlockState pState) {

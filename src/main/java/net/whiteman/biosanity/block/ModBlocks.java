@@ -14,6 +14,7 @@ import net.minecraftforge.registries.RegistryObject;
 import net.whiteman.biosanity.BiosanityMod;
 import net.whiteman.biosanity.block.custom.PurificationStationBlock;
 import net.whiteman.biosanity.block.custom.RedstoneLampUVBlock;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmBlock;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmCoreBlock;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRotBlock;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock;
@@ -36,19 +37,23 @@ public class ModBlocks {
             ));
 
     public static final RegistryObject<Block> NEOPLASM_BLOCK = registerBlock("neoplasm_block",
-            () -> new NeoplasmCoreBlock(BlockBehaviour.Properties.of()
-                    .strength(0.3f, 9f)
+            () -> new NeoplasmBlock(NeoplasmBlock.getDefaultProperties()
+            ));
+
+    public static final RegistryObject<Block> NEOPLASM_CORE_BLOCK = registerBlock("neoplasm_core_block",
+            () -> new NeoplasmCoreBlock(NeoplasmBlock.getDefaultProperties()
+                    .strength(5.3f, 18f)
                     .randomTicks()
             ));
 
     public static final RegistryObject<Block> NEOPLASM_ROT_BLOCK = registerBlock("neoplasm_rot_block",
-            () -> new NeoplasmRotBlock(BlockBehaviour.Properties.of()
+            () -> new NeoplasmRotBlock(NeoplasmBlock.getDefaultProperties()
                     .strength(1.5f, 2f)
                     .randomTicks()
             ));
 
     public static final RegistryObject<Block> NEOPLASM_VEIN_BLOCK = registerBlock("neoplasm_vein_block",
-            () -> new NeoplasmVeinBlock(BlockBehaviour.Properties.of()
+            () -> new NeoplasmVeinBlock(NeoplasmBlock.getDefaultProperties()
                     .strength(4.5f, 6f)
                     .randomTicks()
             ));

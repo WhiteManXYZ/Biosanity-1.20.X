@@ -27,6 +27,7 @@ public class ModBlockLootTables extends BlockLootSubProvider {
         this.dropSelf(ModBlocks.UV_LAMP_BLOCK.get());
         this.dropSelf(ModBlocks.PURIFICATION_STATION_BLOCK.get());
         this.dropSelf(ModBlocks.NEOPLASM_BLOCK.get());
+        this.dropSelf(ModBlocks.NEOPLASM_CORE_BLOCK.get());
         this.add(ModBlocks.NEOPLASM_VEIN_BLOCK.get(), noDrop());
         this.add(ModBlocks.NEOPLASM_ROT_BLOCK.get(), noDrop());
 
