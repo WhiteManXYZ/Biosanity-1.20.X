@@ -21,6 +21,7 @@ import net.whiteman.biosanity.client.model.OverlayModelLoader;
 import net.whiteman.biosanity.client.sound.ModSounds;
 import net.whiteman.biosanity.item.ModCreativeModTabs;
 import net.whiteman.biosanity.item.ModItems;
+import net.whiteman.biosanity.message.ModMessages;
 import net.whiteman.biosanity.recipe.ModRecipes;
 import net.whiteman.biosanity.screen.ModMenuTypes;
 import net.whiteman.biosanity.screen.PurificationStationBlockScreen;
@@ -56,6 +57,7 @@ public class BiosanityMod {
 
     private void commonSetup(final FMLCommonSetupEvent event) {
         event.enqueueWork(NeoplasmUtils.ResourceRegistry::setup);
+        event.enqueueWork(ModMessages::register);
     }
 
     // Add the example block item to the building blocks tab
