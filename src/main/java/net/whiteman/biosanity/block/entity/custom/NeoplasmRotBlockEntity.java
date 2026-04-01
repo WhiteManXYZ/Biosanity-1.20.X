@@ -1,56 +1,160 @@
 package net.whiteman.biosanity.block.entity.custom;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.HolderGetter;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.Connection;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.client.model.data.ModelData;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmRotBlock;
+import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock;
 import net.whiteman.biosanity.block.entity.ModBlockEntities;
 import net.whiteman.biosanity.client.model.ModelProperties;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
+import static net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock.HAS_NUTRIENT;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.DIRECTIONS;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.ResourceRegistry.ResourceType;
+
 public class NeoplasmRotBlockEntity extends BlockEntity {
-    public static final int MAX_STAGES = 3;
-    // Stage 0 -> 0.75, etc.
-    // Number of values must match MAX_STAGES
-    private static final double[] DROP_CHANCES = {0.75, 0.35, 0.1};
+    public static final int TICKS_TO_TRANSFER_NUTRIENT = 5;
 
     private BlockState originalState = Blocks.AIR.defaultBlockState();
-    private int overlayStage = 0;
+    private int infectionStage = 0;
+    private ResourceType heldResourceType = ResourceType.NONE;
+    private int heldResourceLevel = 0;
+    private int transferCooldown = 0;
 
     public NeoplasmRotBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.NEOPLASM_ROT_BE.get(), pos, state);
+    }
+
+    public void tick(Level level, BlockPos pos, BlockState state, NeoplasmRotBlockEntity be) {
+        if (!state.getValue(HAS_NUTRIENT) || be.heldResourceType == ResourceType.NONE) return;
+
+        // Transfer countdown
+        if (be.transferCooldown > 0) {
+            be.transferCooldown--;
+            return;
+        }
+
+        be.transferResource(level, pos, state);
+    }
+
+    // Resource transfer
+    // Transfers resources to veins/other rots using "chain" and "dijkstra algorithm" method
+    // cannot transfer resource directly to core
+    private void transferResource(Level level, BlockPos pos, BlockState state) {
+        if (level.isClientSide) return;
+        int myDistance = state.getValue(NeoplasmRotBlock.DISTANCE);
+
+        for (Direction dir : DIRECTIONS) {
+            BlockPos targetPos = pos.relative(dir);
+            BlockState targetState = level.getBlockState(targetPos);
+            BlockEntity targetBE = level.getBlockEntity(targetPos);
+
+            // First priority is transfer to the closest vein
+            if (targetState.getBlock() instanceof NeoplasmVeinBlock) {
+                // If vein has resource, do nothing and request update later
+                if (targetState.getValue(NeoplasmVeinBlock.HAS_NUTRIENT)) {
+                    level.scheduleTick(pos, state.getBlock(), TICKS_TO_TRANSFER_NUTRIENT);
+                    return;
+                }
+
+                // Target vein
+                level.setBlock(targetPos, targetState.setValue(NeoplasmVeinBlock.HAS_NUTRIENT, true), Block.UPDATE_ALL);
+
+                if (targetBE instanceof NeoplasmVeinBlockEntity veinBE) {
+                    // Target vein
+                    veinBE.setData(this.heldResourceType, this.heldResourceLevel);
+                    veinBE.setNutrientTransferCooldown(TICKS_TO_TRANSFER_NUTRIENT);
+                    // Current rot
+                    level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), Block.UPDATE_ALL);
+                    this.clearResource();
+                }
+                break;
+            }
+            // Second priority is transfer to rot block that placed close to vein than us
+            else if (targetState.getBlock() instanceof NeoplasmRotBlock) {
+                int targetDist = targetState.getValue(NeoplasmRotBlock.DISTANCE);
+
+                if (targetDist < myDistance) {
+                    // If rot has resource to send, do nothing and request update later
+                    if (targetState.getValue(HAS_NUTRIENT)) {
+                        level.scheduleTick(pos, state.getBlock(), TICKS_TO_TRANSFER_NUTRIENT);
+                        return;
+                    }
+
+                    // Target rot
+                    level.setBlock(targetPos, targetState.setValue(HAS_NUTRIENT, true), Block.UPDATE_ALL);
+
+                    if (targetBE instanceof NeoplasmRotBlockEntity nextRotBE) {
+                        // Target rot
+                        nextRotBE.setData(this.heldResourceType, this.heldResourceLevel);
+                        nextRotBE.transferCooldown = TICKS_TO_TRANSFER_NUTRIENT;
+                        // Current rot
+                        level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), Block.UPDATE_ALL);
+                        this.clearResource();
+                    }
+
+
+                    // TEST PARTICLE
+                    if (level instanceof ServerLevel serverLevel) {
+                        serverLevel.sendParticles(
+                                ParticleTypes.SCULK_SOUL,
+                                targetPos.getX() + 0.5,
+                                targetPos.getY() + 0.7,
+                                targetPos.getZ() + 0.5,
+                                10,
+                                0.4, 0.4, 0.4,
+                                0.05
+                        );
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     @Override
     public @NotNull ModelData getModelData() {
         return ModelData.builder()
                 .with(ModelProperties.ORIGINAL_STATE, originalState)
-                .with(ModelProperties.OVERLAY_STAGE, overlayStage)
+                .with(ModelProperties.OVERLAY_STAGE, infectionStage)
                 .build();
     }
 
-    public double getCurrentDropChance() {
-        if (overlayStage >= 0 && overlayStage < DROP_CHANCES.length) {
-            return DROP_CHANCES[overlayStage];
-        }
-        return 0.0;
+    public void setData(ResourceType type, int level) {
+        this.heldResourceType = type;
+        this.heldResourceLevel = level;
+        this.setChanged();
     }
 
-    public int getOverlayStage() {
-        return overlayStage;
+    private void clearResource() {
+        this.heldResourceType = ResourceType.NONE;
+        this.heldResourceLevel = 0;
+        this.setChanged();
+    }
+
+    public int getInfectionStage() {
+        return infectionStage;
     }
 
     public void setInfectionStage(int stage) {
-        this.overlayStage = stage;
+        this.infectionStage = stage;
         setChanged();
         if (level != null) {
             level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
@@ -59,44 +163,56 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
 
     public void setOriginalState(BlockState state) {
         this.originalState = state;
-        setChanged();
+        this.setChanged();
+        if (level != null) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
     }
 
     public BlockState getOriginalState() {
         return this.originalState;
     }
 
-    /**
-     * A universal getter multiplier based on the current state.
-     * @param multipliers Array of results for each stage.
-     * @return The multiplier of the current stage (or the last one available in the array).
-     */
     public float getMultiplier(float[] multipliers) {
         if (multipliers == null || multipliers.length == 0) return 1.0f;
 
-        int index = Math.min(this.overlayStage, multipliers.length - 1);
+        int index = Math.min(this.infectionStage, multipliers.length - 1);
         return multipliers[Math.max(0, index)];
     }
 
+    public double getMultiplier(double[] multipliers) {
+        if (multipliers == null || multipliers.length == 0) return 1.0f;
+
+        int index = Math.min(this.infectionStage, multipliers.length - 1);
+        return multipliers[Math.max(0, index)];
+    }
 
     @Override
     protected void saveAdditional(@NotNull CompoundTag tag) {
-        super.saveAdditional(tag);
         tag.put("OriginalBlock", NbtUtils.writeBlockState(originalState));
-        tag.putInt("OverlayStage", overlayStage);
+        tag.putInt("overlayStage", infectionStage);
+        tag.putString("heldResourceType", heldResourceType.name());
+        tag.putInt("heldResourceLevel", heldResourceLevel);
+        super.saveAdditional(tag);
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
         if (tag.contains("OriginalBlock", 10)) { // 10 - compound tag
-            HolderGetter<Block> holdergetter = this.level != null ?
-                    this.level.holderLookup(Registries.BLOCK) :
-                    BuiltInRegistries.BLOCK.asLookup();
+            try {
+                HolderGetter<Block> holdergetter = this.level != null ?
+                        this.level.holderLookup(Registries.BLOCK) :
+                        BuiltInRegistries.BLOCK.asLookup();
 
-            this.originalState = NbtUtils.readBlockState(holdergetter, tag.getCompound("OriginalBlock"));
+                this.originalState = NbtUtils.readBlockState(holdergetter, tag.getCompound("OriginalBlock"));
+            } catch (IllegalArgumentException e) {
+                this.originalState = Blocks.AIR.defaultBlockState(); // Fallback
+            }
         }
-        this.overlayStage = tag.getInt("OverlayStage");
+        this.infectionStage = tag.getInt("overlayStage");
+        this.heldResourceType = ResourceType.valueOf(tag.getString("heldResourceType"));
+        this.heldResourceLevel = tag.getInt("heldResourceLevel");
     }
 
     @Override
@@ -114,13 +230,19 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
     @Override
     public void onDataPacket(Connection net, ClientboundBlockEntityDataPacket pkt) {
         BlockState oldState = this.originalState;
-        int oldStage = this.overlayStage;
+        int oldStage = this.infectionStage;
 
-        super.onDataPacket(net, pkt);
+        CompoundTag tag = pkt.getTag();
+        if (tag != null) {
+            this.load(tag);
+        }
 
-        if (this.level != null && (this.originalState != oldState || this.overlayStage != oldStage)) {
-            requestModelDataUpdate();
-            this.level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
+        if (this.level != null && this.level.isClientSide) {
+            if (!Objects.equals(this.originalState, oldState) || this.infectionStage != oldStage) {
+                requestModelDataUpdate();
+                BlockState currentState = getBlockState();
+                this.level.sendBlockUpdated(worldPosition, currentState, currentState, Block.UPDATE_CLIENTS);
+            }
         }
     }
 }
