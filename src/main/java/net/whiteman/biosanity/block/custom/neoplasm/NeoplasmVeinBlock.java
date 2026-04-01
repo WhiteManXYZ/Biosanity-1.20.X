@@ -2,6 +2,7 @@ package net.whiteman.biosanity.block.custom.neoplasm;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -21,17 +22,20 @@ import net.whiteman.biosanity.block.ModBlocks;
 import net.whiteman.biosanity.block.entity.ModBlockEntities;
 import net.whiteman.biosanity.block.entity.custom.NeoplasmRotBlockEntity;
 import net.whiteman.biosanity.block.entity.custom.NeoplasmVeinBlockEntity;
+import net.whiteman.biosanity.message.ModMessages;
+import net.whiteman.biosanity.message.SyncNeoplasmRotPacket;
 import net.whiteman.biosanity.util.block.NeoplasmUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import static net.whiteman.biosanity.util.block.NeoplasmUtils.ResourceRegistry.*;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.DIRECTIONS;
 
 public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode {
     // States
     public static final BooleanProperty MATURE = BooleanProperty.create("mature");
     public static final DirectionProperty FACING = BlockStateProperties.FACING;
-    public static final DirectionProperty PARENT_DIRECTION = DirectionProperty.create("parent_direction", Direction.values());
+    public static final DirectionProperty PARENT_DIRECTION = DirectionProperty.create("parent_direction", DIRECTIONS);
     public static final BooleanProperty HAS_NUTRIENT = BooleanProperty.create("has_nutrient");
     // Base params
     private static final double BRANCHING_CHANCE = 0.02;
@@ -63,10 +67,11 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
 
     /// WIP
     /// Maybe make smart resource searching?
+    /// Don't allow to grow forward while falling down
     private void performGrowth(ServerLevel level, BlockPos pos, BlockState state, RandomSource random) {
         // There a chance to just grow up and end vein chain
         if (random.nextDouble() < MATURE_CHANCE) {
-            level.setBlock(pos, state.setValue(MATURE, true), 3);
+            level.setBlock(pos, state.setValue(MATURE, true), Block.UPDATE_ALL);
             return;
         }
         // Original dir contains original "root vein" direction
@@ -117,10 +122,20 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
     private void absorbResources(ServerLevel level, BlockPos targetPos, ResourceTypeEntry info, BlockState targetState) {
         level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
                 .setValue(NeoplasmRotBlock.RESOURCE_TYPE, info.resourceType())
-                .setValue(NeoplasmRotBlock.LEVEL, info.level()), 3);
+                .setValue(NeoplasmRotBlock.LEVEL, info.level()), Block.UPDATE_CLIENTS);
 
         if (level.getBlockEntity(targetPos) instanceof NeoplasmRotBlockEntity devourBE) {
             devourBE.setOriginalState(targetState);
+            devourBE.setChanged();
+            // Sync a little later for prevent desynchronization
+            var server = level.getServer();
+            server.tell(new TickTask(server.getTickCount(), () -> {
+                if (level.isLoaded(targetPos) && level.getBlockEntity(targetPos) instanceof NeoplasmRotBlockEntity actualBe) {
+                    if (!actualBe.isRemoved()) {
+                        ModMessages.sendToClientsTracking(new SyncNeoplasmRotPacket(targetPos, actualBe.saveWithFullMetadata()), actualBe);
+                    }
+                }
+            }));
         }
     }
 
@@ -134,17 +149,17 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
             // Target block
             level.setBlock(targetPos, this.defaultBlockState()
                     .setValue(PARENT_DIRECTION, growDir.getOpposite())
-                    .setValue(FACING, originalDir), 3);
+                    .setValue(FACING, originalDir), Block.UPDATE_ALL);
             scheduleNextTick(level, targetPos);
             // Current block
-            level.setBlock(pos, state.setValue(MATURE, true), 3);
+            level.setBlock(pos, state.setValue(MATURE, true), Block.UPDATE_ALL);
         } else if (!targetPos.relative(originalDir.getOpposite()).equals(pos)) {
             Direction nextDir = calculateOriginalDirection(pos, random, targetPos, originalDir);
             if (nextDir == null) return;
             // Only target block
             level.setBlock(targetPos, this.defaultBlockState()
                     .setValue(PARENT_DIRECTION, growDir.getOpposite())
-                    .setValue(FACING, nextDir), 3);
+                    .setValue(FACING, nextDir), Block.UPDATE_ALL);
             scheduleNextTick(level, targetPos);
         }
     }
@@ -154,7 +169,7 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
         Direction branchDir = null;
         Direction nextDir;
         // Calculating relative coordinates
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             if (targetPos.relative(dir.getOpposite()).equals(pos)) {
                 branchDir = dir;
                 break;
@@ -209,7 +224,7 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
     }
 
     private static boolean hasNeoplasmNearby(Level level, BlockPos targetPos, BlockPos currentPos) {
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             BlockPos neighbor = targetPos.relative(d);
             if (!neighbor.equals(currentPos) && level.getBlockState(neighbor).getBlock() instanceof INeoplasmNode) {
                 return true;
@@ -221,7 +236,7 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
     private record ResourceResult(Direction direction, ResourceTypeEntry info, BlockState state) {}
 
     private static ResourceResult findResourceNearby(Level level, BlockPos pos) {
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             BlockPos checkPos = pos.relative(d);
             BlockState state = level.getBlockState(checkPos);
             ResourceTypeEntry info = getResourceInfo(state.getBlock());
@@ -234,7 +249,7 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
     }
 
     private static boolean hasNonMatureNearby(Level level, BlockPos pos) {
-        for (Direction d : Direction.values()) {
+        for (Direction d : DIRECTIONS) {
             BlockPos checkPos = pos.relative(d);
             BlockState state = level.getBlockState(checkPos);
 
@@ -286,13 +301,13 @@ public class NeoplasmVeinBlock extends BaseEntityBlock implements INeoplasmNode 
         }
         // If the living end of our vein is destroyed, we make the previous block young again
         // (and all neighbors too)
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : DIRECTIONS) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
 
             if ((state.hasProperty(MATURE) && !state.getValue(MATURE)) || hasNonMatureNearby(level, pos)) {
                 if (neighborState.hasProperty(MATURE) && neighborState.getValue(MATURE)) {
-                    level.setBlock(neighborPos, neighborState.setValue(MATURE, false), 3);
+                    level.setBlock(neighborPos, neighborState.setValue(MATURE, false), Block.UPDATE_ALL);
 
                     // Test particle
                     level.levelEvent(2001, neighborPos, Block.getId(neighborState));

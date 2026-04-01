@@ -1,5 +1,6 @@
 package net.whiteman.biosanity.util.block;
 
+import net.minecraft.core.Direction;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.util.StringRepresentable;
@@ -12,6 +13,7 @@ import java.util.*;
 
 public class NeoplasmUtils {
     public static final int MAX_RESOURCE_LEVEL = 7;
+    public static final Direction[] DIRECTIONS = Direction.values();
 
     public static class CoreRegistry {
         public static final int MAX_XP = 1000;

@@ -6,6 +6,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock;
@@ -14,13 +15,14 @@ import org.jetbrains.annotations.NotNull;
 
 import static net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock.HAS_NUTRIENT;
 import static net.whiteman.biosanity.block.custom.neoplasm.NeoplasmVeinBlock.PARENT_DIRECTION;
-import static net.whiteman.biosanity.util.block.NeoplasmUtils.ResourceRegistry.*;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.DIRECTIONS;
+import static net.whiteman.biosanity.util.block.NeoplasmUtils.ResourceRegistry.ResourceType;
 
 public class NeoplasmVeinBlockEntity extends BlockEntity {
     public static final int TICKS_TO_TRANSFER_NUTRIENT = 5;
 
-    private ResourceType type = ResourceType.NONE;
-    private int level = 0;
+    private ResourceType heldResourceType = ResourceType.NONE;
+    private int heldResourceLevel = 0;
     private int transferCooldown = 0;
 
     public NeoplasmVeinBlockEntity(BlockPos pPos, BlockState pBlockState) {
@@ -28,7 +30,7 @@ public class NeoplasmVeinBlockEntity extends BlockEntity {
     }
 
     public void tick(Level level, BlockPos pos, BlockState state, NeoplasmVeinBlockEntity be) {
-        if (!state.getValue(HAS_NUTRIENT)) return;
+        if (!state.getValue(HAS_NUTRIENT) || be.heldResourceType == ResourceType.NONE) return;
 
         // Transfer countdown
         if (be.transferCooldown > 0) {
@@ -42,31 +44,34 @@ public class NeoplasmVeinBlockEntity extends BlockEntity {
     // Nutrient transfer
     // Transfers nutrients to core using "chain" method
     private void transferNutrient(Level level, BlockPos pos, BlockState state) {
+        if (level.isClientSide) return;
+
         Direction toParent = state.getValue(PARENT_DIRECTION);
         BlockPos targetPos = pos.relative(toParent);
         BlockState targetState = level.getBlockState(targetPos);
         BlockEntity targetEntity = level.getBlockEntity(targetPos);
 
-        // Transfer logic
+        // First priority is transfer to the "parent vein"
+        // because core cant just suck resource from side vein
+        // only from vein which is the end of the segment
         if (targetState.getBlock() instanceof NeoplasmVeinBlock block) {
-            // Don't move resources if they have one
+            // If vein has resource, do nothing and request update later
             if (targetState.getValue(HAS_NUTRIENT)) {
                 level.scheduleTick(pos, state.getBlock(), TICKS_TO_TRANSFER_NUTRIENT);
                 return;
             }
 
             // Target vein
-            level.setBlock(targetPos, targetState.setValue(HAS_NUTRIENT, true), 3);
+            level.setBlock(targetPos, targetState.setValue(HAS_NUTRIENT, true), Block.UPDATE_ALL);
 
             if (targetEntity instanceof NeoplasmVeinBlockEntity blockEntity) {
-                blockEntity.setData(this.type, this.level);
+                // Target vein
+                blockEntity.setData(this.heldResourceType, this.heldResourceLevel);
                 blockEntity.transferCooldown = TICKS_TO_TRANSFER_NUTRIENT;
+                // Current vein
+                level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), Block.UPDATE_ALL);
+                this.clearResource();
             }
-
-            // Current vein
-            level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), 3);
-            this.setData(ResourceType.NONE, 0);
-
 
             // TEST PARTICLE
             if (level instanceof ServerLevel serverLevel) {
@@ -81,34 +86,62 @@ public class NeoplasmVeinBlockEntity extends BlockEntity {
                 );
             }
         }
-        // Put to core logic
-        else if (targetEntity instanceof NeoplasmCoreBlockEntity core) {
-            core.decomposeResource(this.type, this.level);
-            level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), 3);
-            this.setData(ResourceType.NONE, 0);
+        // Second priority is: deliver resources to the core
+        else for (Direction dir : DIRECTIONS) {
+            BlockEntity targetCoreEntity = level.getBlockEntity(pos.relative(dir));
+
+            if (targetCoreEntity instanceof NeoplasmCoreBlockEntity core) {
+                // Target core
+                core.decomposeResource(this.heldResourceType, this.heldResourceLevel);
+                // Current vein
+                level.setBlock(pos, state.setValue(HAS_NUTRIENT, false), Block.UPDATE_ALL);
+                this.clearResource();
+
+
+                // TEST PARTICLE
+                if (level instanceof ServerLevel serverLevel) {
+                    serverLevel.sendParticles(
+                            ParticleTypes.WAX_ON,
+                            targetCoreEntity.getBlockPos().getX() + 0.5,
+                            targetCoreEntity.getBlockPos().getY() + 0.9,
+                            targetCoreEntity.getBlockPos().getZ() + 0.5,
+                            20,
+                            0.4, 0.4, 0.4,
+                            0.05
+                    );
+                }
+                break;
+            }
         }
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag) {
-        tag.putString("resourceType", type.name());
-        tag.putInt("resourceLevel", level);
+        tag.putString("heldResourceType", heldResourceType.name());
+        tag.putInt("heldResourceLevel", heldResourceLevel);
         super.saveAdditional(tag);
     }
 
     @Override
     public void load(@NotNull CompoundTag tag) {
         super.load(tag);
-        this.type = ResourceType.valueOf(tag.getString("resourceType"));
-        this.level = tag.getInt("resourceLevel");
+        this.heldResourceType = ResourceType.valueOf(tag.getString("heldResourceType"));
+        this.heldResourceLevel = tag.getInt("heldResourceLevel");
     }
 
     public void setData(ResourceType type, int level) {
-        this.type = type;
-        this.level = level;
+        this.heldResourceType = type;
+        this.heldResourceLevel = level;
         this.setChanged();
     }
 
-    public ResourceType getResourceType() { return type; }
-    public int getResourceLevel() { return level; }
+    private void clearResource() {
+        this.heldResourceType = ResourceType.NONE;
+        this.heldResourceLevel = 0;
+        this.setChanged();
+    }
+
+    public void setNutrientTransferCooldown(int ticks) {
+        this.transferCooldown = ticks;
+    }
 }
