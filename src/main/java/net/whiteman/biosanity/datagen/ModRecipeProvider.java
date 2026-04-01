@@ -16,11 +16,11 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraftforge.common.Tags;
 import net.minecraftforge.common.crafting.conditions.IConditionBuilder;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.block.ModBlocks;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
 import net.whiteman.biosanity.datagen.recipe_builders.PurificationStationRecipeBuilder;
-import net.whiteman.biosanity.item.ModItems;
-import net.whiteman.biosanity.recipe.ModRecipes;
-import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
+import net.whiteman.biosanity.world.item.ModItems;
+import net.whiteman.biosanity.world.item.crafting.ModRecipes;
+import net.whiteman.biosanity.world.util.ColoredItemsRegistry;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.ModifierType;
+import static net.whiteman.biosanity.world.util.ModifierUtils.ModifierType;
 
 public class ModRecipeProvider extends RecipeProvider implements IConditionBuilder {
     private static final List<ItemLike> ALGANIT_SMELTABLES = List.of(ModBlocks.NETHER_ALGANIT_ORE.get());
@@ -98,8 +98,8 @@ public class ModRecipeProvider extends RecipeProvider implements IConditionBuild
 
         for (DyeColor color : DyeColor.values()) {
             PAINTING_FOLDERS.forEach((folderName, tag) -> {
-                List<Item> folderItems = ColorsRegistry.getListByFolder(folderName);
-                Item result = ColorsRegistry.getBlockForColor(folderItems, color);
+                List<Item> folderItems = ColoredItemsRegistry.getListByFolder(folderName);
+                Item result = ColoredItemsRegistry.getBlockForColor(folderItems, color);
 
                 if (result != Items.AIR) {
                     List<Item> filteredItems = folderItems.stream()

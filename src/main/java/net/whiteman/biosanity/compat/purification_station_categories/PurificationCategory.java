@@ -9,7 +9,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.recipe.purification_station.PurificationRecipe;
+import net.whiteman.biosanity.world.item.crafting.PurificationRecipe;
 import org.jetbrains.annotations.NotNull;
 
 public class PurificationCategory extends AbstractCategory<PurificationRecipe> {

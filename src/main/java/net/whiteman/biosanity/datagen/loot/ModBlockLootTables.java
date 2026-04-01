@@ -11,8 +11,8 @@ import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import net.minecraftforge.registries.RegistryObject;
-import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.item.ModItems;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
+import net.whiteman.biosanity.world.item.ModItems;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Set;

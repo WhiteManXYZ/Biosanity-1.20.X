@@ -15,17 +15,17 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.block.entity.ModBlockEntities;
-import net.whiteman.biosanity.client.model.OverlayModelLoader;
-import net.whiteman.biosanity.client.sound.ModSounds;
-import net.whiteman.biosanity.item.ModCreativeModTabs;
-import net.whiteman.biosanity.item.ModItems;
+import net.whiteman.biosanity.client.gui.screens.inventory.PurificationStationScreen;
+import net.whiteman.biosanity.client.resources.model.OverlayModelLoader;
+import net.whiteman.biosanity.client.resources.sounds.ModSounds;
 import net.whiteman.biosanity.message.ModMessages;
-import net.whiteman.biosanity.recipe.ModRecipes;
-import net.whiteman.biosanity.screen.ModMenuTypes;
-import net.whiteman.biosanity.screen.PurificationStationBlockScreen;
-import net.whiteman.biosanity.util.block.NeoplasmUtils;
+import net.whiteman.biosanity.world.inventory.ModMenuTypes;
+import net.whiteman.biosanity.world.item.ModCreativeModTabs;
+import net.whiteman.biosanity.world.item.ModItems;
+import net.whiteman.biosanity.world.item.crafting.ModRecipes;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
+import net.whiteman.biosanity.world.level.block.entity.ModBlockEntities;
+import net.whiteman.biosanity.world.neoplasm.resource.ResourceRegistry;
 
 // The value here should match an entry in the META-INF/mods.toml file
 @Mod(BiosanityMod.MOD_ID)
@@ -56,7 +56,7 @@ public class BiosanityMod {
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {
-        event.enqueueWork(NeoplasmUtils.ResourceRegistry::setup);
+        event.enqueueWork(ResourceRegistry::setup);
         event.enqueueWork(ModMessages::register);
     }
 
@@ -77,7 +77,7 @@ public class BiosanityMod {
         @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event)
         {
-            MenuScreens.register(ModMenuTypes.PURIFICATION_STATION_BLOCK_MENU.get(), PurificationStationBlockScreen::new);
+            MenuScreens.register(ModMenuTypes.PURIFICATION_STATION_BLOCK_MENU.get(), PurificationStationScreen::new);
 
             event.enqueueWork(() -> {
                 // If block has overlays we add his here

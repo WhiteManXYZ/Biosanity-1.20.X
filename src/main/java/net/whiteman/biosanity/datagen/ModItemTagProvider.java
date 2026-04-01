@@ -6,7 +6,7 @@ import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.world.level.block.Block;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
+import net.whiteman.biosanity.world.util.ColoredItemsRegistry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,6 +19,6 @@ public class ModItemTagProvider extends ItemTagsProvider {
 
     @Override
     protected void addTags(HolderLookup.@NotNull Provider provider) {
-        ColorsRegistry.getAllColorsFor("_concrete").forEach(tag(ModTags.Items.CONCRETE)::add);
+        ColoredItemsRegistry.getAllColorsFor("_concrete").forEach(tag(ModTags.Items.CONCRETE)::add);
     }
 }

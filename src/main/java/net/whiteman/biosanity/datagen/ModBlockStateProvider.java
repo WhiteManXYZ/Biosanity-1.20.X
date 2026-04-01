@@ -12,8 +12,8 @@ import net.minecraftforge.client.model.generators.CustomLoaderBuilder;
 import net.minecraftforge.common.data.ExistingFileHelper;
 import net.minecraftforge.registries.RegistryObject;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.block.custom.RedstoneLampUVBlock;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
+import net.whiteman.biosanity.world.level.block.RedstoneUVLampBlock;
 
 public class ModBlockStateProvider extends BlockStateProvider {
     public ModBlockStateProvider(PackOutput output, ExistingFileHelper exFileHelper) {
@@ -46,7 +46,7 @@ public class ModBlockStateProvider extends BlockStateProvider {
 
     private void customLamp() {
         getVariantBuilder(ModBlocks.UV_LAMP_BLOCK.get()).forAllStates(state -> {
-            if (state.getValue(RedstoneLampUVBlock.LIT)) {
+            if (state.getValue(RedstoneUVLampBlock.LIT)) {
                 return new ConfiguredModel[]{new ConfiguredModel(models().cubeAll("uv_lamp_block_lit",
                         new ResourceLocation(BiosanityMod.MOD_ID, "block/" + "uv_lamp_block_lit")))};
             } else {

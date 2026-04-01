@@ -12,11 +12,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.RecipeManager;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.block.ModBlocks;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
 import net.whiteman.biosanity.compat.purification_station_categories.PaintingCategory;
 import net.whiteman.biosanity.compat.purification_station_categories.PurificationCategory;
-import net.whiteman.biosanity.recipe.ModRecipes;
-import net.whiteman.biosanity.screen.PurificationStationBlockScreen;
+import net.whiteman.biosanity.world.item.crafting.ModRecipes;
+import net.whiteman.biosanity.client.gui.screens.inventory.PurificationStationScreen;
 import org.jetbrains.annotations.NotNull;
 
 @JeiPlugin
@@ -42,7 +42,6 @@ public class JEIBiosanityPlugin implements IModPlugin {
         registration.addRecipes(PurificationCategory.PURIFICATION_TYPE,
                 recipeManager.getAllRecipesFor(ModRecipes.PURIFICATION_TYPE.get()));
 
-        // TODO(whiteman) make filter for recipes (yellow wool to yellow wool fix)
         // TODO(whiteman) add usage screens for dyes and sand dust
         registration.addRecipes(PaintingCategory.PAINTING_TYPE,
                 recipeManager.getAllRecipesFor(ModRecipes.PAINTING_TYPE.get()));
@@ -62,7 +61,7 @@ public class JEIBiosanityPlugin implements IModPlugin {
 
     @Override
     public void registerGuiHandlers(IGuiHandlerRegistration registration) {
-        registration.addRecipeClickArea(PurificationStationBlockScreen.class, 92, 37, 25, 21,
+        registration.addRecipeClickArea(PurificationStationScreen.class, 92, 37, 25, 21,
                 PurificationCategory.PURIFICATION_TYPE,
                 PaintingCategory.PAINTING_TYPE
         );

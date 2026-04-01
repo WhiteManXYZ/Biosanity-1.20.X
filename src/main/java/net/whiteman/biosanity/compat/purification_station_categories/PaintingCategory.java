@@ -9,10 +9,9 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.recipe.purification_station.PaintingRecipe;
+import net.whiteman.biosanity.world.item.crafting.PaintingRecipe;
+import net.whiteman.biosanity.world.util.ModifierUtils;
 import org.jetbrains.annotations.NotNull;
-
-import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.*;
 
 public class PaintingCategory extends AbstractCategory<PaintingRecipe> {
     public static final ResourceLocation UID = new ResourceLocation(BiosanityMod.MOD_ID, "painting");
@@ -46,7 +45,7 @@ public class PaintingCategory extends AbstractCategory<PaintingRecipe> {
     }
 
     private void renderModifierMaterialBar(@NotNull PaintingRecipe recipe, GuiGraphics guiGraphics, int x, int y) {
-        float[] color = adjustColor(convertToColors(recipe.getColor()), 0.35f, -0.35f);
+        float[] color = ModifierUtils.adjustColor(ModifierUtils.convertToColors(recipe.getColor()), 0.35f, -0.35f);
 
         guiGraphics.setColor(color[0], color[1], color[2], 1.0f);
         guiGraphics.blit(PURIFICATION_STATION_TEXTURE, x, y, 176, 21, 19, 8);

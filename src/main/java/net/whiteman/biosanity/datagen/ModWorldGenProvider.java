@@ -7,9 +7,9 @@ import net.minecraft.data.PackOutput;
 import net.minecraftforge.common.data.DatapackBuiltinEntriesProvider;
 import net.minecraftforge.registries.ForgeRegistries;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.worldgen.ModBiomeModifiers;
-import net.whiteman.biosanity.worldgen.ModConfiguredFeatures;
-import net.whiteman.biosanity.worldgen.ModPlacedFeatures;
+import net.whiteman.biosanity.world.level.biome.ModBiomeModifiers;
+import net.whiteman.biosanity.world.level.levelgen.feature.ModConfiguredFeatures;
+import net.whiteman.biosanity.world.level.levelgen.feature.ModPlacedFeatures;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;

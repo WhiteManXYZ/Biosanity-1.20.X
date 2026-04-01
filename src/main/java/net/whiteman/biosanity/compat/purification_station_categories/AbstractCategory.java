@@ -24,17 +24,17 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.whiteman.biosanity.BiosanityMod;
-import net.whiteman.biosanity.block.ModBlocks;
-import net.whiteman.biosanity.recipe.purification_station.AbstractStationRecipe;
-import net.whiteman.biosanity.util.block.purification_station.ColorsRegistry;
-import net.whiteman.biosanity.util.block.purification_station.ModifiersUtils;
+import net.whiteman.biosanity.world.level.block.ModBlocks;
+import net.whiteman.biosanity.world.item.crafting.AbstractJettingRecipe;
+import net.whiteman.biosanity.world.util.ColoredItemsRegistry;
+import net.whiteman.biosanity.world.util.ModifierUtils;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class AbstractCategory<T extends AbstractStationRecipe> implements IRecipeCategory<T> {
+public abstract class AbstractCategory<T extends AbstractJettingRecipe> implements IRecipeCategory<T> {
     public static final ResourceLocation PURIFICATION_STATION_TEXTURE = new ResourceLocation(BiosanityMod.MOD_ID,
             "textures/gui/purification_station_block_gui.png");
     private static final String NECESSARY_MODIFIER_LABEL_TRANSLATABLE = "jei.biosanity.purification_station_block.necessary_modifier_label";
@@ -82,8 +82,8 @@ public abstract class AbstractCategory<T extends AbstractStationRecipe> implemen
         arrow.draw(guiGraphics, 44, 23);
         // Render necessary pressure for specific item
         if (mouseX >= 104 && mouseX <= 120 && mouseY >= 0 && mouseY <= 16) {
-            ModifiersUtils.ModifierType type = recipe.getModifier();
-            int pressure = ModifiersUtils.ModifierManager.getNecessaryPressure(type);
+            ModifierUtils.ModifierType type = recipe.getModifier();
+            int pressure = ModifierUtils.ModifierManager.getNecessaryPressure(type);
             List<Component> tooltip = new ArrayList<>();
 
             tooltip.add(Component.translatable("jei.biosanity.purification_station_block.necessary_pressure_label")
@@ -97,15 +97,15 @@ public abstract class AbstractCategory<T extends AbstractStationRecipe> implemen
         // Render necessary modifier/color for specific item
         if (mouseX >= 21 && mouseX <= 41 && mouseY >= 0 && mouseY <= 8) {
             DyeColor currentDye = recipe.getColor();
-            ModifiersUtils.ModifierType currentModifier = recipe.getModifier();
+            ModifierUtils.ModifierType currentModifier = recipe.getModifier();
 
             String label;
             String value;
             TextColor color = TextColor.fromRgb(0x55FFFF);
-            if (currentModifier == ModifiersUtils.ModifierType.DYE) {
+            if (currentModifier == ModifierUtils.ModifierType.DYE) {
                 label = NECESSARY_DYE_LABEL_TRANSLATABLE;
                 value = NECESSARY_DYE_TRANSLATABLE + currentDye.getName();
-                color = ColorsRegistry.DYE_TO_COLOR.getOrDefault(currentDye, TextColor.fromRgb(0x55FFFF));
+                color = ColoredItemsRegistry.DYE_TO_COLOR.getOrDefault(currentDye, TextColor.fromRgb(0x55FFFF));
             } else {
                 label = NECESSARY_MODIFIER_LABEL_TRANSLATABLE;
                 value = currentModifier.getTranslatableName();

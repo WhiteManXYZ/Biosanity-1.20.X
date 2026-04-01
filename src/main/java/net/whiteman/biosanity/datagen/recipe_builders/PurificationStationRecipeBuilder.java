@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import static net.whiteman.biosanity.util.block.purification_station.ModifiersUtils.ModifierType;
+import static net.whiteman.biosanity.world.util.ModifierUtils.ModifierType;
 
 public class PurificationStationRecipeBuilder {
     private final Item result;
