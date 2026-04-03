@@ -48,10 +48,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class PurificationStationBlockEntity extends BlockEntity implements MenuProvider {
-    private static final int INPUT_SLOT = 0;
-    private static final int OUTPUT_SLOT = 1;
-    private static final int FUEL_SLOT = 2;
-    private static final int SECOND_INPUT_SLOT = 3;
+    private static final int SLOT_INPUT = 0;
+    private static final int SLOT_FUEL = 1;
+    private static final int SLOT_MODIFIER = 2;
+    private static final int SLOT_RESULT = 3;
 
     private static final int FUEL_CONVERSION_TIME = 50;
     public static final int PURIFICATION_TIME = 400;
@@ -81,9 +81,9 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
         public boolean isItemValid(int slot, @NotNull ItemStack stack) {
             return switch (slot) {
                 case 0 -> true;
-                case 1 -> false;
-                case 2 -> ALLOWED_FUEL.test(stack);
-                case 3 -> ALLOWED_MODIFICATORS.test(stack);
+                case 1 -> ALLOWED_FUEL.test(stack);
+                case 2 -> ALLOWED_MODIFICATORS.test(stack);
+                case 3 -> false;
                 default -> super.isItemValid(slot, stack);
             };
         }
@@ -171,15 +171,15 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
         // Fuel intake
         if (blockEntity.fuel <= 0 && blockEntity.checkInputFuel()) {
             blockEntity.fuel = MAX_FUEL_COUNT;
-            blockEntity.itemHandler.extractItem(FUEL_SLOT, 1, false);
+            blockEntity.itemHandler.extractItem(SLOT_FUEL, 1, false);
             changed = true;
         }
         // Modifier material intake
         if (blockEntity.modifier_amount <= 0 && blockEntity.checkInputModifierMaterial()) {
             blockEntity.modifier_type = determiteInputModifierType();
             blockEntity.modifier_amount = ModifierUtils.ModifierManager.getCapacity(blockEntity.modifier_type);
-            blockEntity.currentModifierColor = ModifierUtils.ModifierManager.getColor(blockEntity.itemHandler.getStackInSlot(SECOND_INPUT_SLOT).getItem());
-            blockEntity.itemHandler.extractItem(SECOND_INPUT_SLOT, 1, false);
+            blockEntity.currentModifierColor = ModifierUtils.ModifierManager.getColor(blockEntity.itemHandler.getStackInSlot(SLOT_MODIFIER).getItem());
+            blockEntity.itemHandler.extractItem(SLOT_MODIFIER, 1, false);
             changed = true;
         }
         // Fuel to pressure conversion
@@ -230,11 +230,11 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
     }
     
     public boolean checkInputFuel() {
-        return ALLOWED_FUEL.test(this.itemHandler.getStackInSlot(FUEL_SLOT));
+        return ALLOWED_FUEL.test(this.itemHandler.getStackInSlot(SLOT_FUEL));
     }
 
     public boolean checkInputModifierMaterial() {
-        return ALLOWED_MODIFICATORS.test(this.itemHandler.getStackInSlot(SECOND_INPUT_SLOT));
+        return ALLOWED_MODIFICATORS.test(this.itemHandler.getStackInSlot(SLOT_MODIFIER));
     }
 
     public int getPurificationTime() {
@@ -251,10 +251,10 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
 
         ItemStack result = recipe.get().getResultItem(RegistryAccess.EMPTY);
 
-        this.itemHandler.extractItem(INPUT_SLOT, 1, false);
+        this.itemHandler.extractItem(SLOT_INPUT, 1, false);
 
-        this.itemHandler.setStackInSlot(OUTPUT_SLOT, new ItemStack(result.getItem(),
-                this.itemHandler.getStackInSlot(OUTPUT_SLOT).getCount() + result.getCount()));
+        this.itemHandler.setStackInSlot(SLOT_RESULT, new ItemStack(result.getItem(),
+                this.itemHandler.getStackInSlot(SLOT_RESULT).getCount() + result.getCount()));
     }
 
     private boolean hasRecipe() {
@@ -265,7 +265,7 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
 
         AbstractJettingRecipe recipe = recipeOptional.get();
         ItemStack result = recipeOptional.get().getResultItem(getLevel().registryAccess());
-        ItemStack inputStack = this.itemHandler.getStackInSlot(0);
+        ItemStack inputStack = this.itemHandler.getStackInSlot(SLOT_INPUT);
 
         // Input ingredient item check
         if (inputStack.getItem() == result.getItem()) {
@@ -314,15 +314,15 @@ public class PurificationStationBlockEntity extends BlockEntity implements MenuP
     }
 
     private boolean canInsertItemIntoOutputSlot(Item item) {
-        return this.itemHandler.getStackInSlot(OUTPUT_SLOT).isEmpty() || this.itemHandler.getStackInSlot(OUTPUT_SLOT).is(item);
+        return this.itemHandler.getStackInSlot(SLOT_RESULT).isEmpty() || this.itemHandler.getStackInSlot(SLOT_RESULT).is(item);
     }
 
     private boolean canInsertAmountIntoOutputSlot(int count) {
-        return this.itemHandler.getStackInSlot(OUTPUT_SLOT).getCount() + count <= this.itemHandler.getStackInSlot(OUTPUT_SLOT).getMaxStackSize();
+        return this.itemHandler.getStackInSlot(SLOT_RESULT).getCount() + count <= this.itemHandler.getStackInSlot(SLOT_RESULT).getMaxStackSize();
     }
 
     private ModifierUtils.ModifierType determiteInputModifierType() {
-        ItemStack stack = this.itemHandler.getStackInSlot(SECOND_INPUT_SLOT);
+        ItemStack stack = this.itemHandler.getStackInSlot(SLOT_MODIFIER);
         if (stack.isEmpty()) return ModifierUtils.ModifierType.NONE;
 
         if (stack.is(ModItems.SAND_DUST.get())) return ModifierUtils.ModifierType.SAND_DUST;
