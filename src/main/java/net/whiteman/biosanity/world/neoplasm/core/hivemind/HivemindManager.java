@@ -84,8 +84,6 @@ public class HivemindManager extends SavedData {
      * @return UUID of joined/created Hivemind
      */
     public @NotNull UUID joinOrCreateHivemind(BlockPos pos, List<BlockPos> neighbors) {
-        System.out.println(hiveminds);
-
         UUID targetId = null;
 
         // Looking for neighbor, that already joined hivemind
