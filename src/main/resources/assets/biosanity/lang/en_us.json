@@ -10,6 +10,7 @@
   "block.biosanity.neoplasm_block": "Neoplasm",
   "block.biosanity.neoplasm_vein_block": "Vein",
   "block.biosanity.neoplasm_rot_block": "Rot block",
+  "block.biosanity.neoplasm_core_block": "Core",
 
   "jei.block.action.biosanity.purification_translatable": "Purification",
   "jei.block.action.biosanity.painting_translatable": "Painting",
