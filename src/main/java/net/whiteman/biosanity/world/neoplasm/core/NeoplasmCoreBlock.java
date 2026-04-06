@@ -8,10 +8,14 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
-import net.whiteman.biosanity.world.neoplasm.common.node.INeoplasmNode;
 import net.whiteman.biosanity.world.level.block.entity.ModBlockEntities;
+import net.whiteman.biosanity.world.neoplasm.common.node.INeoplasmNode;
+import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
+import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
 
 public class NeoplasmCoreBlock extends BaseEntityBlock implements INeoplasmNode {
     public NeoplasmCoreBlock(Properties pProperties) { super(pProperties); }
@@ -29,6 +33,45 @@ public class NeoplasmCoreBlock extends BaseEntityBlock implements INeoplasmNode 
     @Override
     public boolean isCore() {
         return true;
+    }
+
+    @Override
+    public void onPlace(@NotNull BlockState state, Level level, @NotNull BlockPos pos, @NotNull BlockState oldState, boolean isMoving) {
+        if (!level.isClientSide && !state.is(oldState.getBlock())) {
+            if (level.getBlockEntity(pos) instanceof NeoplasmCoreBlockEntity core) {
+                HivemindManager manager = HivemindManager.get(level);
+
+                UUID id = manager.joinOrCreateHivemind(pos, core.findNeighborCores(level));
+
+                core.setHivemindId(id);
+            }
+        }
+        super.onPlace(state, level, pos, oldState, isMoving);
+    }
+
+    @Override
+    public void onRemove(BlockState state, @NotNull Level level, @NotNull BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof NeoplasmCoreBlockEntity core) {
+                HivemindManager data = HivemindManager.get(level);
+                Hivemind hive = data.getHivemindById(core.getHivemindId());
+
+                if (hive != null) {
+                    // Remove member
+                    hive.removeMember(pos);
+                    hive.updateActiveMembers(level);
+
+                    // Remove hivemind if empty
+                    if (hive.getAllMembers().isEmpty()) {
+                        data.deleteHivemind(hive.getId());
+                    }
+
+                    data.setDirty();
+                }
+            }
+            super.onRemove(state, level, pos, newState, isMoving);
+        }
     }
 
     @Override
