@@ -5,14 +5,17 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
+import net.whiteman.biosanity.world.neoplasm.ai.GoalRegistry;
+import net.whiteman.biosanity.world.neoplasm.ai.IHivemindGoal;
+import net.whiteman.biosanity.world.neoplasm.core.NeoplasmCoreBlockEntity;
 
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.*;
 
-import static net.whiteman.biosanity.world.neoplasm.core.CoreConfig.*;
+import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.*;
 
 public class Hivemind {
     // TODO maybe make split in shards logic?
@@ -23,7 +26,7 @@ public class Hivemind {
     private final Set<BlockPos> activeMembers = new HashSet<>(); // Members that current loaded in chunk
 
     // Core section
-    private int experiencePoints = STARTING_CORE_LEVEL.getNeededXp();
+    private int experiencePoints = STARTING_HIVEMIND_LEVEL.getNeededXp();
     private int stamina = 0;
 
     private int biomass = STARTING_BIOMASS_VALUE;
@@ -31,6 +34,8 @@ public class Hivemind {
     private int energy = STARTING_ENERGY_VALUE;
 
     // AI section (wip)
+    private final Map<BlockPos, IHivemindGoal> assignments = new HashMap<>();
+
     private int actionCooldown = 0;
     private int alertPoints = 0;
 
@@ -47,12 +52,79 @@ public class Hivemind {
 
         if (this.activeMembers.isEmpty()) return;
 
-        // Some code
+        tickAI(level);
     }
 
     //region AI
+    public void tickAI(Level level) {
+        actionCooldown--;
+        // Some code
+        if (actionCooldown <= 0) {
+            distributeGoals(level);
+            setActionCooldown(level);
+        }
+    }
+
+    public void distributeGoals(Level level) {
+        Set<Class<? extends IHivemindGoal>> takenNonStackable = new HashSet<>();
+
+        // Checking each member goals, to prevent taking non-stackable goal
+        for (BlockPos pos : activeMembers) {
+            if (level.getBlockEntity(pos) instanceof NeoplasmCoreBlockEntity core) {
+                IHivemindGoal current = core.getCurrentGoal();
+                if (current != null && !current.isStackable()) {
+                    takenNonStackable.add(current.getClass());
+                }
+            }
+        }
+
+        // We distribute new tasks to those who are free or who need to change their goals
+        for (BlockPos pos : activeMembers) {
+            if (level.getBlockEntity(pos) instanceof NeoplasmCoreBlockEntity core) {
+
+                // We get a list of goals sorted by weight (Utility) from highest to lowest
+                List<IHivemindGoal> candidates = GoalRegistry.createGoalsFor(core);
+                candidates.sort((a, b) -> Double.compare(b.evaluateUtility(), a.evaluateUtility()));
+
+                for (IHivemindGoal candidate : candidates) {
+                    double weight = candidate.evaluateUtility();
+                    if (weight <= 0) break;
+
+                    // Looking for next available goal
+                    if (!candidate.canUse()) continue;
+
+                    // Non-stackable check
+                    if (!candidate.isStackable() && takenNonStackable.contains(candidate.getClass())) {
+                        continue;
+                    }
+
+                    // Mark goal as "used" if non-stackable
+                    if (!candidate.isStackable()) {
+                        takenNonStackable.add(candidate.getClass());
+                    }
+
+                    // Setting goal with checking
+                    if (shouldSwitchGoal(core.getCurrentGoal(), candidate)) {
+                        core.setCurrentGoal(candidate);
+                    }
+
+                    break; // Found the best goal for this core, moving to next
+                }
+            }
+        }
+    }
+
+    private boolean shouldSwitchGoal(IHivemindGoal current, IHivemindGoal next) {
+        if (current == null) return true;
+        if (current.getClass() == next.getClass()) return false;
+
+        // Switching only if new goal is more important than current
+        return next.evaluateUtility() > (current.evaluateUtility() + 5d);
+    }
+
     private void setActionCooldown(Level level) {
-        this.actionCooldown = MIN_TICKS_REACTION + level.random.nextInt(MAX_ADDITIONAL_TICKS_REACTION);
+        RandomSource random = level.random;
+        this.actionCooldown = Math.max(random.nextInt(getMaxReactionInTicks() + 1), MIN_TICKS_REACTION);
     }
 
     public void increaseAlertPoints(int amount) {
@@ -67,12 +139,23 @@ public class Hivemind {
         this.alertPoints = Math.max(alertPoints - amount, 0);
     }
 
+    public AlertLevel getAlertLevel() {
+        return AlertLevel.getFromPoints(alertPoints);
+    }
+
     private void onResourceChanged() {
         // Alerts AI about new portion of resources
         // Some code
-        if (this.biomass >= getMaxStorage() * 0.8 && this.actionCooldown > 5) {
+        if (this.biomass >= getStorage() * 0.8 && this.actionCooldown > 5) {
             this.actionCooldown = 5;
         }
+    }
+
+    public double getAverageResourcesAmount() {
+        double rawValue = (biomass + minerals + energy) / 3.0;
+        return new BigDecimal(rawValue)
+                .setScale(2, RoundingMode.HALF_UP)
+                .doubleValue();
     }
     //endregion
 
@@ -100,7 +183,7 @@ public class Hivemind {
     public void modifyBiomass(int amount) {
         int oldVal = this.biomass;
 
-        this.biomass = Math.max(0, Math.min(this.biomass + amount, getMaxStorage()));
+        this.biomass = Math.max(0, Math.min(this.biomass + amount, getStorage()));
 
         if (oldVal != this.biomass) {
             this.onResourceChanged();
@@ -112,7 +195,7 @@ public class Hivemind {
     public void modifyMinerals(int amount) {
         int oldVal = this.minerals;
 
-        this.minerals = Math.max(0, Math.min(this.minerals + amount, getMaxStorage()));
+        this.minerals = Math.max(0, Math.min(this.minerals + amount, getStorage()));
 
         if (oldVal != this.minerals) {
             this.onResourceChanged();
@@ -124,7 +207,7 @@ public class Hivemind {
     public void modifyEnergy(int amount) {
         int oldVal = this.energy;
 
-        this.energy = Math.max(0, Math.min(this.energy + amount, getMaxStorage()));
+        this.energy = Math.max(0, Math.min(this.energy + amount, getStorage()));
 
         if (oldVal != this.energy) {
             this.onResourceChanged();
@@ -158,11 +241,14 @@ public class Hivemind {
 
     public HivemindLevel getLevel() { return HivemindLevel.getFromXp(this.experiencePoints); }
 
-    public int getMaxStorage() { return START_MAX_STORAGE + (members.size() * CORE_EXPAND_STORAGE_VALUE); }
+    public int getStorage() { return START_MAX_STORAGE + (members.size() * CORE_EXPAND_STORAGE_VALUE); }
+
+    public int getMaxReactionInTicks() { return TICKS_REACTION_THRESHOLD + (members.size() * CORE_REACTION_LOAD_VALUE); }
 
     // We suppose to save/load hivemind data
     // bc each restart actually it's a new object,
     // and it lost all achievements/resources etc.
+    // TODO fix. don't work saving
     public CompoundTag save(CompoundTag pTag) {
         pTag.putUUID("id", this.id);
         pTag.putInt("experiencePoints", experiencePoints);
