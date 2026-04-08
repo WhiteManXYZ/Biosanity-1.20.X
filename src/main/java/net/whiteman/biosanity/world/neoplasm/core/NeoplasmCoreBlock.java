@@ -15,6 +15,7 @@ import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
 public class NeoplasmCoreBlock extends BaseEntityBlock implements INeoplasmNode {
@@ -30,8 +31,7 @@ public class NeoplasmCoreBlock extends BaseEntityBlock implements INeoplasmNode 
         return RenderShape.MODEL;
     }
 
-    @Override
-    public boolean isCore() {
+    @Override public boolean isCore() {
         return true;
     }
 
@@ -41,7 +41,14 @@ public class NeoplasmCoreBlock extends BaseEntityBlock implements INeoplasmNode 
             if (level.getBlockEntity(pos) instanceof NeoplasmCoreBlockEntity core) {
                 HivemindManager manager = HivemindManager.get(level);
 
-                UUID id = manager.joinOrCreateHivemind(pos, core.findNeighborCores(level));
+                List<BlockPos> neighbors = core.findNeighborCores();
+
+                UUID id;
+                if (neighbors != null) {
+                    id = manager.joinOrCreateHivemind(pos, neighbors);
+                } else {
+                   id = manager.createHivemind(pos);
+                }
 
                 core.setHivemindId(id);
             }
