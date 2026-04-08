@@ -5,8 +5,11 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindLevel;
 
 import java.util.*;
+
+import static net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindLevel.isHigherOrEqualLevel;
 
 public class ResourceRegistry {
     public static final int MAX_RESOURCE_LEVEL = 7;
@@ -14,14 +17,13 @@ public class ResourceRegistry {
 
     private static final Map<Block, ResourceTypeEntry> DEVOUR_MAP = new LinkedHashMap<>();
     private static final Map<TagKey<Block>, ResourceTypeEntry> DEVOUR_MAP_TAGS = new LinkedHashMap<>();
-    private static final Set<Block> REPLACEABLE_BLOCKS = new HashSet<>();
-    private static final List<TagKey<Block>> REPLACEABLE_TAGS = new ArrayList<>();
+    private static final Map<Block, HivemindLevel> REPLACEABLE_BLOCKS = new HashMap<>();
+    private static final Map<TagKey<Block>, HivemindLevel> REPLACEABLE_TAGS = new HashMap<>();
 
     public static void setup() {
         // Important: Register individual blocks first,
         // then block tags, all in order:
         // Highest -> Lowest level
-        // Biomass -> Mineral -> Energy
         /// Still in WIP
 
         //region Devourable registry
@@ -46,17 +48,27 @@ public class ResourceRegistry {
 
         // LEVEL 3: EXOTIC & NETHER
         register(Blocks.NETHER_QUARTZ_ORE, ResourceType.MINERAL, 3);
+        register(Blocks.SHROOMLIGHT, ResourceType.MINERAL, 3);
         register(BlockTags.GOLD_ORES, ResourceType.MINERAL, 3);
         register(BlockTags.EMERALD_ORES, ResourceType.MINERAL, 3);
         register(BlockTags.CRIMSON_STEMS, ResourceType.BIOMASS, 3);
         register(BlockTags.WARPED_STEMS, ResourceType.BIOMASS, 3);
 
         // LEVEL 2: UTILITY MINERALS
+        register(Blocks.BONE_BLOCK, ResourceType.BIOMASS, 2);
         register(BlockTags.IRON_ORES, ResourceType.MINERAL, 2);
         register(BlockTags.LAPIS_ORES, ResourceType.ENERGY, 2);
         register(BlockTags.REDSTONE_ORES, ResourceType.ENERGY, 2);
 
         // LEVEL 1: BASE BIOMASS & FUEL
+        register(Blocks.HAY_BLOCK, ResourceType.BIOMASS, 1);
+        register(Blocks.PUMPKIN, ResourceType.BIOMASS, 1);
+        register(Blocks.CARVED_PUMPKIN, ResourceType.BIOMASS, 1);
+        register(Blocks.JACK_O_LANTERN, ResourceType.BIOMASS, 1);
+        register(Blocks.MELON, ResourceType.BIOMASS, 1);
+        register(Blocks.RED_MUSHROOM_BLOCK, ResourceType.BIOMASS, 1);
+        register(Blocks.BROWN_MUSHROOM_BLOCK, ResourceType.BIOMASS, 1);
+        register(Blocks.MUSHROOM_STEM, ResourceType.BIOMASS, 1);
         register(BlockTags.LOGS, ResourceType.BIOMASS, 1);
         register(BlockTags.COAL_ORES, ResourceType.MINERAL, 1);
         register(BlockTags.COPPER_ORES, ResourceType.MINERAL, 1);
@@ -66,29 +78,31 @@ public class ResourceRegistry {
         REPLACEABLE_BLOCKS.clear();
         REPLACEABLE_TAGS.clear();
 
-        register(BlockTags.REPLACEABLE_BY_TREES);
-        register(BlockTags.FLOWERS);
-        register(BlockTags.DIRT);
-        register(BlockTags.SAND);
-        register(BlockTags.SNOW);
-        register(BlockTags.CORAL_BLOCKS);
-        register(BlockTags.WOODEN_STAIRS);
-        register(BlockTags.PLANKS);
-        register(Blocks.GRAVEL);
-        register(Blocks.CLAY);
-        register(Blocks.MOSS_CARPET);
-        register(Blocks.FARMLAND);
+        register(BlockTags.REPLACEABLE_BY_TREES, HivemindLevel.T1);
+        register(BlockTags.FLOWERS, HivemindLevel.T1);
+        register(BlockTags.DIRT, HivemindLevel.T1);
+        register(BlockTags.SAND, HivemindLevel.T1);
+        register(BlockTags.SNOW, HivemindLevel.T1);
+        register(BlockTags.CORAL_BLOCKS, HivemindLevel.T1);
+        register(BlockTags.WOODEN_STAIRS, HivemindLevel.T1);
+        register(BlockTags.PLANKS, HivemindLevel.T1);
+        register(Blocks.GRAVEL, HivemindLevel.T1);
+        register(Blocks.CLAY, HivemindLevel.T1);
+        register(Blocks.MOSS_CARPET, HivemindLevel.T1);
+        register(Blocks.FARMLAND, HivemindLevel.T1);
         //endregion
     }
 
-    public static boolean isReplaceable(BlockState state) {
-        if (state.isAir()) return true;
+    public static boolean isReplaceable(BlockState state, HivemindLevel currentLevel) {
+        if (state.isAir() || state.canBeReplaced()) return true;
 
-        if (REPLACEABLE_BLOCKS.contains(state.getBlock())) return true;
+        HivemindLevel requiredForBlock = REPLACEABLE_BLOCKS.get(state.getBlock());
+        if (requiredForBlock != null && isHigherOrEqualLevel(currentLevel, requiredForBlock)) return true;
 
-        for (TagKey<Block> tag : REPLACEABLE_TAGS) {
-            if (state.is(tag)) return true;
+        for (TagKey<Block> tag : REPLACEABLE_TAGS.keySet()) {
+            if (state.is(tag) && isHigherOrEqualLevel(currentLevel, REPLACEABLE_TAGS.get(tag))) return true;
         }
+
         return false;
     }
 
@@ -109,7 +123,7 @@ public class ResourceRegistry {
 
     private static void register(Block block, ResourceType resourceType, int level) {
         if (level > MAX_RESOURCE_LEVEL) {
-            throw new IllegalArgumentException("Error in NeoplasmUtils: Level " + level +
+            throw new IllegalArgumentException("Error in ResourceRegistry: Level " + level +
                     " is higher than max allowed: " + MAX_RESOURCE_LEVEL + ". Use lower value instead.");
         }
 
@@ -118,18 +132,18 @@ public class ResourceRegistry {
 
     private static void register(TagKey<Block> tag, ResourceType resourceType, int level) {
         if (level > MAX_RESOURCE_LEVEL) {
-            throw new IllegalArgumentException("Error in NeoplasmUtils: Level " + level +
+            throw new IllegalArgumentException("Error in ResourceRegistry: Level " + level +
                     " is higher than max allowed: " + MAX_RESOURCE_LEVEL + ". Use lower value instead.");
         }
 
         DEVOUR_MAP_TAGS.put(tag, new ResourceTypeEntry(resourceType, level));
     }
 
-    public static void register(Block block) {
-        REPLACEABLE_BLOCKS.add(block);
+    public static void register(Block block, HivemindLevel level) {
+        REPLACEABLE_BLOCKS.put(block, level);
     }
 
-    public static void register(TagKey<Block> tag) {
-        REPLACEABLE_TAGS.add(tag);
+    public static void register(TagKey<Block> tag, HivemindLevel level) {
+        REPLACEABLE_TAGS.put(tag, level);
     }
 }
