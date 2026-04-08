@@ -1,33 +1,76 @@
 package net.whiteman.biosanity.world.neoplasm.ai;
 
-import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import net.whiteman.biosanity.world.neoplasm.core.NeoplasmCoreBlockEntity;
+import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
 
-public class GrowVeinGoal implements ICoreGoal {
-    private final NeoplasmCoreBlockEntity core;
-    private final int priority;
-    private int cooldown = 0;
+import java.util.List;
 
-    public GrowVeinGoal(NeoplasmCoreBlockEntity core, int priority) {
-        this.core = core;
-        this.priority = priority;
+/** Sends an impulse to grow from core */
+public class GrowVeinGoal extends AbstractGoal {
+    private final int goalCooldown;
+    private final int biomassCost = 1;
+    private final int staminaCost = 3;
+
+    public GrowVeinGoal(NeoplasmCoreBlockEntity core, double baseWeight, int goalCooldown) {
+        super(core, baseWeight);
+        this.goalCooldown = goalCooldown;
     }
 
     @Override
-    public int getPriority() { return priority; }
+    public boolean canUse() {
+        Level level = core.getLevel();
+        Hivemind hivemind = getHivemind();
+        List<BlockPos> connectedVeins = core.findNeighborVeins();
+        if (level == null || hivemind == null || connectedVeins == null) return false;
+
+        // If we don't have connected veins, return
+        if (connectedVeins.isEmpty()) return false;
+
+        // If we don't have enough resources, return false
+        return (hivemind.getBiomass() >= biomassCost && hivemind.getStamina() >= staminaCost);
+    }
+
+    public double evaluateUtility() {
+        // TODO growth weight calculate logic
+        Hivemind hivemind = getHivemind();
+        if (hivemind == null) return 0;
+
+        double utility = super.evaluateUtility();
+        if (utility <= 0) return 0;
+
+        // Stamina factor (100% -> full base weight, 50% -> half etc.)
+        double staminaFactor = (double) hivemind.getStamina() / hivemind.getMaxStamina();
+        utility *= staminaFactor;
+
+        // TEST
+        // "Adrenaline"
+        // If resources is close to be insufficient, increase "looking for resources"
+        double biomassFactor = (double) hivemind.getBiomass() / hivemind.getStorage();
+        if (biomassFactor < 0.15d) {
+            utility += 0.3 * baseWeight;
+        }
+
+        return Math.max(0, utility);
+    }
+
+    @Override public void start() {
+        System.out.println(getHivemind().getId() + ": Started growing veins!");
+        resetTimer(goalCooldown);
+    }
 
     @Override
-    public GoalCategory getCategory() { return GoalCategory.GROWTH; }
+    public void tick() {
+        timer++;
 
-    @Override
-    public boolean canUse() { return false; }
+        if (timer >= currentCooldown) {
+            // TODO vein "impulse" from core to vein end logic (for growth)
+            resetTimer(goalCooldown);
+        }
+    }
 
-    @Override
-    public void start() {}
-
-    @Override
-    public void tick(Hivemind hive) {}
-
-    @Override
-    public void stop() {}
+    @Override public void stop() {
+        System.out.println(getHivemind().getId() + ": Stop growing veins!");
+    }
 }

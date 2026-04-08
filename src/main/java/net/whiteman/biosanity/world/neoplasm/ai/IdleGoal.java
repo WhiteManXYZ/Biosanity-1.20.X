@@ -1,33 +1,50 @@
 package net.whiteman.biosanity.world.neoplasm.ai;
 
-import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
 import net.whiteman.biosanity.world.neoplasm.core.NeoplasmCoreBlockEntity;
 
-public class IdleGoal implements ICoreGoal {
-    private final NeoplasmCoreBlockEntity core;
-    private final int priority;
-    private int cooldown = 0;
+public class IdleGoal extends AbstractGoal {
+    private final int goalCooldown;
 
-    public IdleGoal(NeoplasmCoreBlockEntity core, int priority) {
-        this.core = core;
-        this.priority = priority;
+    public IdleGoal(NeoplasmCoreBlockEntity core, double baseWeight, int goalCooldown) {
+        super(core, baseWeight);
+        this.goalCooldown = goalCooldown;
+    }
+
+    @Override public boolean canUse() {
+        return true; // Always allow to rest
     }
 
     @Override
-    public GoalCategory getCategory() { return GoalCategory.IDLE; }
+    public double evaluateUtility() {
+        double utility = super.evaluateUtility();
+        if (utility <= 0) return 0;
+
+        double staminaPercent = (double) getHivemind().getStamina() / getHivemind().getMaxStamina();
+
+        // If stamina lower than 20%, the desire to rest increases highly
+        if (staminaPercent < 0.2d) return 70d;
+
+        // In a normal state, the desire for rest is based on
+        // how much stamina is insufficient
+        return Math.max(0, utility + (1.0d - staminaPercent) * baseWeight);
+    }
+
+    @Override public void start() {
+        System.out.println("Idle start");
+        resetTimer(goalCooldown);
+    }
 
     @Override
-    public int getPriority() { return priority; }
+    public void tick() {
+        timer++;
 
-    @Override
-    public boolean canUse() { return true; }
+        if (timer >= currentCooldown) {
+            getHivemind().modifyStamina(1);
+            resetTimer(goalCooldown);
+        }
+    }
 
-    @Override
-    public void start() {}
-
-    @Override
-    public void tick(Hivemind hive) {}
-
-    @Override
-    public void stop() {}
+    @Override public void stop() {
+        System.out.println("Idle stop");
+    }
 }
