@@ -30,7 +30,7 @@ import static net.whiteman.biosanity.world.neoplasm.vein.NeoplasmVeinBlock.HAS_N
 import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConstants.DIRECTIONS;
 
 public class NeoplasmRotBlockEntity extends BlockEntity {
-    public static final int TICKS_TO_TRANSFER_NUTRIENT = 5;
+    public static final int TICKS_TO_TRANSFER_NUTRIENT = 15;
 
     private BlockState originalState = Blocks.AIR.defaultBlockState();
     private int infectionStage = 0;
@@ -114,7 +114,7 @@ public class NeoplasmRotBlockEntity extends BlockEntity {
                     // TEST PARTICLE
                     if (level instanceof ServerLevel serverLevel) {
                         serverLevel.sendParticles(
-                                ParticleTypes.SCULK_SOUL,
+                                ParticleTypes.ELECTRIC_SPARK,
                                 targetPos.getX() + 0.5,
                                 targetPos.getY() + 0.7,
                                 targetPos.getZ() + 0.5,
