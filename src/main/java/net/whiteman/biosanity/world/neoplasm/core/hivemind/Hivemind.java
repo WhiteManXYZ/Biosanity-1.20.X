@@ -2,8 +2,6 @@ package net.whiteman.biosanity.world.neoplasm.core.hivemind;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
@@ -15,7 +13,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 
-import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.*;
+import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig.*;
 
 public class Hivemind {
     // TODO maybe make split in shards logic?
@@ -48,7 +46,11 @@ public class Hivemind {
     public void tick(Level level) {
         long time = level.getGameTime();
 
-        if (time % 20 == 0) this.updateActiveMembers(level);
+        if (time % 20 == 0) {
+            this.updateActiveMembers(level);
+
+            decreaseAlertPoints(CALM_DOWN_RATE);
+        }
 
         if (this.activeMembers.isEmpty()) return;
 
@@ -248,9 +250,15 @@ public class Hivemind {
     // We suppose to save/load hivemind data
     // bc each restart actually it's a new object,
     // and it lost all achievements/resources etc.
-    // TODO fix. don't work saving
     public CompoundTag save(CompoundTag pTag) {
         pTag.putUUID("id", this.id);
+
+        long[] memberPositions = members.stream()
+                .mapToLong(BlockPos::asLong)
+                .toArray();
+
+        pTag.putLongArray("members", memberPositions);
+
         pTag.putInt("experiencePoints", experiencePoints);
         pTag.putInt("stamina", stamina);
         pTag.putInt("biomass", biomass);
@@ -262,12 +270,14 @@ public class Hivemind {
 
     public static Hivemind load(CompoundTag pTag) {
         Hivemind hive = new Hivemind(pTag.getUUID("id"));
-        ListTag posList = pTag.getList("members", Tag.TAG_COMPOUND);
 
-        for (int i = 0; i < posList.size(); i++) {
-            CompoundTag tag = posList.getCompound(i);
-            hive.addMember(NbtUtils.readBlockPos(tag));
+        if (pTag.contains("members", Tag.TAG_LONG_ARRAY)) {
+            long[] memberPositions = pTag.getLongArray("members");
+            for (long posLong : memberPositions) {
+                hive.addMember(BlockPos.of(posLong));
+            }
         }
+
         hive.experiencePoints = pTag.getInt("experiencePoints");
         hive.stamina = pTag.getInt("stamina");
         hive.biomass = pTag.getInt("biomass");
