@@ -9,7 +9,7 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.whiteman.biosanity.world.level.block.entity.ModBlockEntities;
-import net.whiteman.biosanity.world.neoplasm.common.node.INeoplasmNode;
+import net.whiteman.biosanity.world.neoplasm.common.INeoplasmNode;
 import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
 import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindManager;
 import org.jetbrains.annotations.NotNull;

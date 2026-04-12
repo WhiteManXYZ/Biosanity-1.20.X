@@ -3,7 +3,7 @@ package net.whiteman.biosanity.world.neoplasm.ai;
 import net.minecraft.util.RandomSource;
 import net.whiteman.biosanity.world.neoplasm.core.NeoplasmCoreBlockEntity;
 
-import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.*;
+import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig.*;
 
 public abstract class AbstractGoal implements IHivemindGoal {
     protected final NeoplasmCoreBlockEntity core;

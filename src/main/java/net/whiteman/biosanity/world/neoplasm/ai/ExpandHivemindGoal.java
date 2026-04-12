@@ -11,7 +11,7 @@ import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
 import java.util.List;
 
 import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConstants.DIRECTIONS;
-import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.HIVEMIND_MAX_CORES;
+import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig.HIVEMIND_MAX_CORES;
 import static net.whiteman.biosanity.world.neoplasm.resource.ResourceRegistry.isReplaceable;
 
 public class ExpandHivemindGoal extends AbstractGoal {

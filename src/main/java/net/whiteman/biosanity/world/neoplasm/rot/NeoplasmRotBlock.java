@@ -46,7 +46,7 @@ public class NeoplasmRotBlock extends BaseEntityBlock {
     public static final int MAX_ROT_CLUSTER_SIZE = 10;
 
     public static final EnumProperty<ResourceType> RESOURCE_TYPE = EnumProperty.create("type", ResourceType.class);
-    public static final IntegerProperty LEVEL = IntegerProperty.create("level", 0, MAX_RESOURCE_LEVEL);
+    public static final IntegerProperty RESOURCE_LEVEL = IntegerProperty.create("level", 0, MAX_RESOURCE_LEVEL);
     public static final IntegerProperty DISTANCE = IntegerProperty.create("distance", 0, MAX_ROT_CLUSTER_SIZE);
     public static final BooleanProperty IS_SOURCE = BooleanProperty.create("is_source");
     public static final BooleanProperty HAS_NUTRIENT = BooleanProperty.create("has_nutrient");
@@ -67,7 +67,7 @@ public class NeoplasmRotBlock extends BaseEntityBlock {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(RESOURCE_TYPE, ResourceType.NONE)
-                .setValue(LEVEL, 0)
+                .setValue(RESOURCE_LEVEL, 0)
                 .setValue(DISTANCE, MAX_ROT_CLUSTER_SIZE)
                 .setValue(IS_SOURCE, false)
                 .setValue(HAS_NUTRIENT, false)
@@ -155,7 +155,7 @@ public class NeoplasmRotBlock extends BaseEntityBlock {
             if (targetDist < MAX_ROT_CLUSTER_SIZE) {
                 level.setBlock(targetPos, ModBlocks.NEOPLASM_ROT_BLOCK.get().defaultBlockState()
                         .setValue(RESOURCE_TYPE, info.resourceType())
-                        .setValue(LEVEL, info.level())
+                        .setValue(RESOURCE_LEVEL, info.level())
                         .setValue(DISTANCE, targetDist), Block.UPDATE_CLIENTS);
 
                 if (level.getBlockEntity(targetPos) instanceof NeoplasmRotBlockEntity be) {
@@ -195,7 +195,7 @@ public class NeoplasmRotBlock extends BaseEntityBlock {
                     // Sets self containers to self resource types/levels
                     // to send it in the closest way to vein
                     level.setBlock(pos, state.setValue(HAS_NUTRIENT, true), Block.UPDATE_ALL);
-                    be.setData(state.getValue(RESOURCE_TYPE), state.getValue(LEVEL));
+                    be.setData(state.getValue(RESOURCE_TYPE), state.getValue(RESOURCE_LEVEL));
                 }
             }
         }
@@ -206,7 +206,7 @@ public class NeoplasmRotBlock extends BaseEntityBlock {
 
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-        builder.add(RESOURCE_TYPE, LEVEL, DISTANCE, IS_SOURCE, HAS_NUTRIENT);
+        builder.add(RESOURCE_TYPE, RESOURCE_LEVEL, DISTANCE, IS_SOURCE, HAS_NUTRIENT);
     }
 
     @Override

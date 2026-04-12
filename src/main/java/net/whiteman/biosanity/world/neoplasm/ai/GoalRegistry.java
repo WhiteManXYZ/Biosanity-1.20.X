@@ -13,7 +13,7 @@ public class GoalRegistry {
 
     static {
         // Growth & expansion
-        register(core -> new GrowVeinGoal(core, 25d, 140));
+        register(core -> new GrowVeinGoal(core, 20d, 140));
         register(core -> new GrowNewVeinGoal(core, 25d, 200));
         register(core -> new ExpandHivemindGoal(core, 20d, 420));
 

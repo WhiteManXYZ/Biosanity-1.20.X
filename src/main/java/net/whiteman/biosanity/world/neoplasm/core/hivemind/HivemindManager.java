@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.*;
 
-import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.HIVEMIND_MAX_CORES;
+import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig.HIVEMIND_MAX_CORES;
 
 @Mod.EventBusSubscriber(modid = BiosanityMod.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE)
 public class HivemindManager extends SavedData {

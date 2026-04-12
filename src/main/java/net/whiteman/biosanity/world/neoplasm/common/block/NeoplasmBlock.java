@@ -11,7 +11,7 @@ import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.MapColor;
-import net.whiteman.biosanity.world.neoplasm.common.node.INeoplasmNode;
+import net.whiteman.biosanity.world.neoplasm.common.INeoplasmNode;
 import org.jetbrains.annotations.NotNull;
 
 public class NeoplasmBlock extends Block implements INeoplasmNode {
