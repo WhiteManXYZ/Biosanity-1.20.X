@@ -1,9 +1,11 @@
 package net.whiteman.biosanity.world.neoplasm.ai;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.Level;
 import net.whiteman.biosanity.world.neoplasm.core.NeoplasmCoreBlockEntity;
 import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
+import net.whiteman.biosanity.world.neoplasm.vein.ImpulseType;
 
 import java.util.List;
 
@@ -12,6 +14,8 @@ public class GrowVeinGoal extends AbstractGoal {
     private final int goalCooldown;
     private final int biomassCost = 1;
     private final int staminaCost = 3;
+
+    private List<BlockPos> connectedVeins;
 
     public GrowVeinGoal(NeoplasmCoreBlockEntity core, double baseWeight, int goalCooldown) {
         super(core, baseWeight);
@@ -22,7 +26,7 @@ public class GrowVeinGoal extends AbstractGoal {
     public boolean canUse() {
         Level level = core.getLevel();
         Hivemind hivemind = getHivemind();
-        List<BlockPos> connectedVeins = core.findNeighborVeins();
+        connectedVeins = core.findNeighborVeins();
         if (level == null || hivemind == null || connectedVeins == null) return false;
 
         // If we don't have connected veins, return
@@ -62,11 +66,29 @@ public class GrowVeinGoal extends AbstractGoal {
 
     @Override
     public void tick() {
+        Level level = core.getLevel();
+        Hivemind hivemind = getHivemind();
+        if (level == null || hivemind == null) return;
         timer++;
 
         if (timer >= currentCooldown) {
-            // TODO vein "impulse" from core to vein end logic (for growth)
-            resetTimer(goalCooldown);
+            // TODO dir calculation
+            BlockPos posA = core.getBlockPos();
+            BlockPos posB = connectedVeins.get(level.random.nextInt(connectedVeins.size()));
+
+            int dx = posB.getX() - posA.getX();
+            int dy = posB.getY() - posA.getY();
+            int dz = posB.getZ() - posA.getZ();
+
+            Direction dir = Direction.fromDelta(dx, dy, dz);
+
+            if (dir == null) return;
+
+            if (core.sendImpulse(ImpulseType.GROW, hivemind.getLevel(), dir)) {
+                hivemind.modifyBiomass(-biomassCost);
+                hivemind.modifyStamina(-staminaCost);
+                resetTimer(goalCooldown);
+            }
         }
     }
 
