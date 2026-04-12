@@ -13,27 +13,26 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.whiteman.biosanity.world.level.block.ModBlocks;
 import net.whiteman.biosanity.world.level.block.entity.ModBlockEntities;
-import net.whiteman.biosanity.world.neoplasm.NeoplasmConfig;
 import net.whiteman.biosanity.world.neoplasm.ai.IHivemindGoal;
-import net.whiteman.biosanity.world.neoplasm.common.node.INeoplasmNode;
+import net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig;
+import net.whiteman.biosanity.world.neoplasm.common.INeoplasmNode;
 import net.whiteman.biosanity.world.neoplasm.core.hivemind.Hivemind;
+import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindLevel;
 import net.whiteman.biosanity.world.neoplasm.core.hivemind.HivemindManager;
 import net.whiteman.biosanity.world.neoplasm.resource.ResourceType;
+import net.whiteman.biosanity.world.neoplasm.vein.ImpulsePacket;
+import net.whiteman.biosanity.world.neoplasm.vein.ImpulseType;
 import net.whiteman.biosanity.world.neoplasm.vein.NeoplasmVeinBlock;
+import net.whiteman.biosanity.world.neoplasm.vein.NeoplasmVeinBlockEntity;
 import org.jetbrains.annotations.NotNull;
 import org.joml.Vector3f;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 
-import static net.whiteman.biosanity.world.neoplasm.NeoplasmConfig.*;
+import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConfig.*;
 import static net.whiteman.biosanity.world.neoplasm.common.NeoplasmConstants.DIRECTIONS;
 import static net.whiteman.biosanity.world.neoplasm.resource.ResourceRegistry.MAX_RESOURCE_LEVEL;
-import static net.whiteman.biosanity.world.neoplasm.vein.NeoplasmVeinBlock.FACING;
-import static net.whiteman.biosanity.world.neoplasm.vein.NeoplasmVeinBlock.PARENT_DIRECTION;
 
 public class NeoplasmCoreBlockEntity extends BlockEntity {
     private UUID hivemindId;
@@ -43,8 +42,12 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
      * to prevent actions in same tick */
     private int goalTickOffset;
     /** Seeded parameter that offsets a little goal condition,
-     * to randomize each cores */
+     * to randomize "determination" each core */
     private int goalConditionOffset;
+
+    private int nextImpulseId = 0;
+    private record PendingImpulse(ImpulsePacket packet, long sentTime) {}
+    private final Map<Integer, PendingImpulse> pendingImpulses = new HashMap<>();
 
     public NeoplasmCoreBlockEntity(BlockPos pPos, BlockState pBlockState) {
         super(ModBlockEntities.NEOPLASM_CORE_BE.get(), pPos, pBlockState);
@@ -64,6 +67,18 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
             } else {
                 this.setCurrentGoal(null);
             }
+        }
+
+        if (level.getGameTime() % 100 == 0) {
+            pendingImpulses.entrySet().removeIf(entry -> {
+                PendingImpulse pending = entry.getValue();
+
+                if (level.getGameTime() - pending.sentTime() > 600) {
+                    this.receiveFailedImpulse(pending.packet());
+                    return true;
+                }
+                return false;
+            });
         }
     }
 
@@ -93,13 +108,17 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
     public boolean growNewVein(Direction dir) {
         if (this.level == null || level.isClientSide || dir == null) return false;
         boolean flag;
+        boolean flag2 = false;
 
         BlockPos targetPos = this.worldPosition.relative(dir);
-        flag = level.setBlock(targetPos, ModBlocks.NEOPLASM_VEIN_BLOCK.get().defaultBlockState()
-                    .setValue(FACING, dir)
-                    .setValue(PARENT_DIRECTION, dir.getOpposite()), 3);
+        flag = level.setBlock(targetPos, ModBlocks.NEOPLASM_VEIN_BLOCK.get().defaultBlockState(), 3);
+        if (level.getBlockEntity(targetPos) instanceof NeoplasmVeinBlockEntity blockEntity) {
+            blockEntity.growthDirection = dir;
+            blockEntity.parentDirection = dir.getOpposite();
+            flag2 = true;
+        }
 
-        if (flag) {
+        if (flag && flag2) {
             // TEST PARTICLE
             ((ServerLevel)level).sendParticles(
                     new BlockParticleOption(ParticleTypes.BLOCK, Blocks.NETHER_WART_BLOCK.defaultBlockState()),
@@ -107,7 +126,7 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
                     10, 0.2, 0.2, 0.2, 0.15);
         }
 
-        return flag;
+        return flag && flag2;
     }
 
     public boolean expandCore(Direction dir) {
@@ -127,6 +146,51 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
         }
 
         return flag;
+    }
+
+    public boolean sendImpulse(ImpulseType type, HivemindLevel level, Direction dir) {
+        if (this.level == null || this.level.isClientSide) return false;
+
+        if (this.level.getBlockEntity(worldPosition.relative(dir)) instanceof NeoplasmVeinBlockEntity be) {
+            generateImpulseId();
+            int id = this.nextImpulseId;
+
+            pendingImpulses.remove(id);
+            ImpulsePacket packet = new ImpulsePacket(type, level, this.worldPosition, id);
+
+            be.setImpulsePacket(packet);
+
+            pendingImpulses.put(id, new PendingImpulse(packet, this.level.getGameTime()));
+            return true;
+        }
+
+        return false;
+    }
+
+    public void receiveImpulseSuccess(ImpulsePacket packet) {
+        Hivemind hivemind = getHivemind();
+        if (hivemind == null) return;
+
+        int id = packet.id();
+
+        if (pendingImpulses.containsKey(id)) {
+            pendingImpulses.remove(id);
+            System.out.printf("Packet successfully delivered! core pos: %s\n", worldPosition);
+        } else {
+            System.out.println("Received an outdated or ghost packet: " + id);
+        }
+    }
+
+    public void receiveFailedImpulse(ImpulsePacket packet) {
+        System.out.println("Failed impulse with id: " + packet.id());
+
+        Hivemind hivemind = getHivemind();
+        if (hivemind == null) return;
+
+        switch (packet.type()) {
+            case GROW -> hivemind.increaseAlertPoints(5);
+            case SCAN -> hivemind.increaseAlertPoints(15);
+        }
     }
     //endregion
 
@@ -196,6 +260,12 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
     }
     //endregion
 
+    private void generateImpulseId() {
+        if (this.nextImpulseId < Integer.MAX_VALUE) {
+            this.nextImpulseId++;
+        } else this.nextImpulseId = 0;
+    }
+
     @Override
     public void onLoad() {
         super.onLoad();
@@ -217,16 +287,18 @@ public class NeoplasmCoreBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(@NotNull CompoundTag pTag) {
         if (this.hivemindId != null) {
-            pTag.putUUID("hivemindId", hivemindId);
+            pTag.putUUID("hivemind_id", hivemindId);
         }
+        pTag.putInt("next_impulse_id", nextImpulseId);
         super.saveAdditional(pTag);
     }
 
     @Override
     public void load(@NotNull CompoundTag pTag) {
         super.load(pTag);
-        if (pTag.hasUUID("hivemindId")) {
-            this.hivemindId = pTag.getUUID("hivemindId");
+        if (pTag.hasUUID("hivemind_id")) {
+            this.hivemindId = pTag.getUUID("hivemind_id");
         }
+        this.nextImpulseId = pTag.getInt("next_impulse_id");
     }
 }
